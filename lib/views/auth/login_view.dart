@@ -1,5 +1,6 @@
 // lib/views/auth/login_view.dart
 import 'package:flutter/material.dart';
+import 'package:quizverse/buttom_navbar.dart';
 import 'package:quizverse/controllers/auth_controller.dart'; // Import AuthController (versi simpel)
 import 'package:quizverse/views/auth/register_view.dart'; // Import RegisterPage
 import 'package:quizverse/views/home/home_view.dart'; // Import HomePage/HomeView
@@ -39,7 +40,7 @@ class _LoginViewState extends State<LoginView> {
         if (loggedIn) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => const BottomNavBar()),
           );
         } else {
           // Tetap di halaman login jika belum login
@@ -86,7 +87,7 @@ class _LoginViewState extends State<LoginView> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => const BottomNavBar()),
       );
     } catch (e) {
       // Tangkap error dari service/controller
