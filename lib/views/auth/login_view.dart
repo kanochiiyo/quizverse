@@ -1,6 +1,6 @@
 // lib/views/auth/login_view.dart
 import 'package:flutter/material.dart';
-import 'package:quizverse/buttom_navbar.dart';
+import 'package:quizverse/bottom_navbar.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/views/auth/register_view.dart';
 

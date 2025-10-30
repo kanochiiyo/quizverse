@@ -13,7 +13,14 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   final DatabaseService _dbHelper = DatabaseService();
   final AuthController _authController = AuthController();
+
+  // Controller untuk search bar
+  final TextEditingController _searchController = TextEditingController();
+  // List untuk menyimpan semua riwayat asli dari DB
   List<Map<String, dynamic>> _quizHistory = [];
+  // List untuk menyimpan hasil filter yang akan ditampilkan
+  List<Map<String, dynamic>> _filteredHistory = [];
+
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -21,6 +28,19 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     _loadHistory();
+
+    // Tambahkan listener ke search controller.
+    // Setiap kali teks berubah, panggil _filterHistory.
+    _searchController.addListener(() {
+      _filterHistory(_searchController.text);
+    });
+  }
+
+  // dispose controller saat widget tidak lagi digunakan
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadHistory() async {
@@ -36,13 +56,14 @@ class _HistoryPageState extends State<HistoryPage> {
       if (userIdString != null) {
         final int userId = int.parse(userIdString);
         final history = await _dbHelper.getQuizHistory(userId);
-        if (!mounted) return; // Check again after await
+        if (!mounted) return;
         setState(() {
-          _quizHistory = history;
+          _quizHistory = history; // Simpan data asli
+          _filteredHistory = history; // Awalnya, tampilkan semua data
           _isLoading = false;
         });
       } else {
-        // Handle case where user ID is not found (shouldn't happen if logged in)
+        // Case where user ID is not found
         if (!mounted) return;
         setState(() {
           _errorMessage = "Tidak dapat memuat riwayat: User tidak ditemukan.";
@@ -57,6 +78,26 @@ class _HistoryPageState extends State<HistoryPage> {
       });
       debugPrint("Error loading history: $e");
     }
+  }
+
+  // Fungsi untuk memfilter riwayat berdasarkan query pencarian
+  void _filterHistory(String query) {
+    final lowerCaseQuery = query.toLowerCase();
+
+    final filteredList = _quizHistory.where((item) {
+      final category = (item['category'] as String?)?.toLowerCase() ?? '';
+      final difficulty = (item['difficulty'] as String?)?.toLowerCase() ?? '';
+      final address = (item['address'] as String?)?.toLowerCase() ?? '';
+
+      return category.contains(lowerCaseQuery) ||
+          difficulty.contains(lowerCaseQuery) ||
+          address.contains(lowerCaseQuery);
+    }).toList();
+
+    // Update state list yang akan ditampilkan
+    setState(() {
+      _filteredHistory = filteredList;
+    });
   }
 
   // Helper function to format the date string
@@ -79,9 +120,42 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Riwayat Kuis'),
-        automaticallyImplyLeading: false, // Remove default back button
+        automaticallyImplyLeading: false, // Remove back button
       ),
-      body: _buildBody(), // Use a helper function for the body
+
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari kategori, kesulitan, atau lokasi...',
+                prefixIcon: const Icon(Icons.search),
+                // Tambahkan tombol clear (X)
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          // _filterHistory('') akan otomatis terpanggil oleh listener
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
+              ),
+            ),
+          ),
+
+          Expanded(
+            child: _buildBody(), // Panggil helper function
+          ),
+        ],
+      ),
     );
   }
 
@@ -107,11 +181,17 @@ class _HistoryPageState extends State<HistoryPage> {
       return const Center(child: Text('Belum ada riwayat kuis.'));
     }
 
-    // Display history using ListView.builder
+    if (_filteredHistory.isEmpty) {
+      return const Center(
+        child: Text('Tidak ada riwayat yang cocok dengan pencarian.'),
+      );
+    }
+
     return ListView.builder(
-      itemCount: _quizHistory.length,
+      itemCount: _filteredHistory.length,
       itemBuilder: (context, index) {
-        final historyItem = _quizHistory[index];
+        final historyItem = _filteredHistory[index];
+
         final score = historyItem['score'] as int?;
         final totalQuestions = historyItem['total_questions'] as int?;
         final category = historyItem['category'] as String?;
@@ -124,7 +204,7 @@ class _HistoryPageState extends State<HistoryPage> {
         final theme = Theme.of(context);
 
         return Padding(
-          padding: EdgeInsetsGeometry.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
           child: Card(
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
@@ -149,7 +229,6 @@ class _HistoryPageState extends State<HistoryPage> {
                   ),
                   Text(_formatDate(date)),
 
-                  // --- TAMPILAN LOKASI BARU ---
                   if (address != null && address.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
@@ -161,7 +240,6 @@ class _HistoryPageState extends State<HistoryPage> {
                             color: Colors.grey[700],
                           ),
                           const SizedBox(width: 4),
-                          // Tampilkan alamat
                           Expanded(
                             child: Text(
                               address,
@@ -197,7 +275,6 @@ class _HistoryPageState extends State<HistoryPage> {
                         ],
                       ),
                     ),
-                  // --- AKHIR TAMPILAN LOKASI BARU ---
                 ],
               ),
               trailing: Chip(
@@ -209,8 +286,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     fontSize: 12,
                   ),
                 ),
-                // --- GANTI WARNA CHIP ---
-                backgroundColor: theme.primaryColor, // <-- WARNA BARU
+                backgroundColor: theme.primaryColor,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               ),
             ),
