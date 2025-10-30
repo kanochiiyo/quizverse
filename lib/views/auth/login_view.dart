@@ -1,9 +1,8 @@
 // lib/views/auth/login_view.dart
 import 'package:flutter/material.dart';
 import 'package:quizverse/buttom_navbar.dart';
-import 'package:quizverse/controllers/auth_controller.dart'; // Import AuthController (versi simpel)
-import 'package:quizverse/views/auth/register_view.dart'; // Import RegisterPage
-import 'package:quizverse/views/home/home_view.dart'; // Import HomePage/HomeView
+import 'package:quizverse/controllers/auth_controller.dart';
+import 'package:quizverse/views/auth/register_view.dart'; 
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});

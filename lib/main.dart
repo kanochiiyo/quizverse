@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quizverse/views/auth/login_view.dart';
-import 'package:timezone/data/latest.dart' as tz; 
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
@@ -18,7 +18,7 @@ void main() async {
     // Fallback ke UTC jika gagal
     tz.setLocalLocation(tz.UTC);
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -27,13 +27,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QuizRealm',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: LoginView(),
-    );
+    return MaterialApp(title: 'Quiz Realm', home: LoginView());
   }
 }

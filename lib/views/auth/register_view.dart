@@ -1,6 +1,6 @@
 // lib/views/auth/register_page.dart
 import 'package:flutter/material.dart';
-import 'package:quizverse/controllers/auth_controller.dart'; 
+import 'package:quizverse/controllers/auth_controller.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -47,10 +47,10 @@ class _RegisterViewState extends State<RegisterView> {
       });
       return;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       // Validasi panjang password
       setState(() {
-        _errorMessage = "Password minimal 6 karakter!";
+        _errorMessage = "Password minimal 8 karakter!";
       });
       return;
     }

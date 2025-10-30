@@ -1,6 +1,5 @@
 import 'package:quizverse/models/quiz_model.dart';
 import 'package:quizverse/services/quiz_service.dart';
-import 'package:flutter/material.dart';
 
 class QuizController {
   final QuizService _service = QuizService();
