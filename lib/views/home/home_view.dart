@@ -1,11 +1,10 @@
+// lib/views/home/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:quizverse/controllers/quiz_controller.dart';
 import 'package:quizverse/models/quiz_model.dart';
+import 'package:quizverse/models/category_model.dart';
 import 'package:quizverse/views/home/quiz_view.dart';
-// Import service konversi
 import 'package:quizverse/services/conversion_service.dart';
-// Import intl jika belum ada, untuk NumberFormat (opsional, tergantung service)
-// import 'package:intl/intl.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -16,31 +15,21 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   final QuizController _controller = QuizController();
-  // Buat instance ConversionService
   final ConversionService _conversionService = ConversionService();
 
-  // default pilihan user
-  String selectedCategory = '9'; // General Knowledge
+  // Ini sudah benar (nullable)
+  String? selectedCategory;
+  bool isLoadingCategories = true;
+  String? categoryError;
+  List<CategoryModel> categories = [];
+
   String selectedDifficulty = 'easy';
   int selectedAmount = 10;
 
-  bool isLoading = false; // Loading untuk proses 'Mulai Kuis'
-
-  // Today Fact
-  String? dailyFact; // Menyimpan teks fakta
-  bool isLoadingFact = true; // Status loading untuk fakta
-  String factError = ''; // Menyimpan pesan error jika gagal load fakta
-
-  // list kategori dari API (static dulu)
-  final List<Map<String, String>> categories = [
-    {'id': '9', 'name': 'General Knowledge'},
-    {'id': '11', 'name': 'Entertainment: Film'},
-    {'id': '12', 'name': 'Entertainment: Music'},
-    {'id': '17', 'name': 'Science & Nature'},
-    {'id': '21', 'name': 'Sports'},
-    {'id': '31', 'name': 'Entertaintment: Japanese Anime & Manga'},
-    {'id': '19', 'name': 'Science: Mathematics'},
-  ];
+  bool isLoading = false;
+  String? dailyFact;
+  bool isLoadingFact = true;
+  String factError = '';
 
   final List<Map<String, String>> difficulties = [
     {'id': 'easy', 'name': 'Mudah'},
@@ -53,181 +42,277 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    // Fakta hanya akan diperbarui setiap kali halaman HomeView() dibuat ulang dari awal. 
-    // Antara setelah login atau aplikasinya diclose
-    _loadDailyFact(); 
+
+    _loadDailyFact();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    if (!mounted) return;
+    setState(() {
+      isLoadingCategories = true;
+      categoryError = null;
+    });
+
+    try {
+      final fetchedCategories = await _controller.loadCategories();
+      if (!mounted) return;
+      setState(() {
+        categories = fetchedCategories;
+
+        if (categories.isNotEmpty) {
+          selectedCategory = categories.first.id.toString();
+        }
+        isLoadingCategories = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        categoryError = e.toString().replaceFirst("Exception: ", "");
+        isLoadingCategories = false;
+      });
+    }
   }
 
   Future<void> _loadDailyFact() async {
     if (!mounted) return;
     setState(() {
-      isLoadingFact = true; // Mulai loading
-      factError = ''; // Hapus error sebelumnya
+      isLoadingFact = true;
+      factError = '';
     });
 
     try {
-      // Panggil fungsi getRandomFact dari service
       final fact = await _conversionService.getRandomFact();
-      // Jika widget masih terpasang, update state dengan fakta baru
       if (mounted) {
         setState(() {
           dailyFact = fact;
-          isLoadingFact = false; // Selesai loading
+          isLoadingFact = false;
         });
       }
     } catch (e) {
-      // Jika terjadi error saat mengambil fakta
       if (mounted) {
         setState(() {
-          // Simpan pesan error untuk ditampilkan
           factError = e.toString().replaceFirst("Exception: ", "");
-          dailyFact = null; // Pastikan tidak ada fakta lama yang ditampilkan
-          isLoadingFact = false; // Selesai loading (meskipun error)
+          dailyFact = null;
+          isLoadingFact = false;
         });
       }
     }
   }
 
   Future<void> startQuiz() async {
-    // --- Fungsi Lama: Memulai Kuis ---
-    setState(() => isLoading = true); // Mulai loading untuk kuis
+    // Pengecekan ini sudah benar
+    if (selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap pilih kategori terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
     try {
       List<QuizModel> questions = await _controller.loadQuestions(
         amount: selectedAmount,
-        category: selectedCategory,
+        category: selectedCategory!, // '!' aman di sini karena sudah dicek null
         difficulty: selectedDifficulty,
       );
 
       debugPrint('GET DATA SUCCESS: GOT ${questions.length} QUESTIONS!');
 
-      if (!mounted)
-        return; // kalo widgetnya dah ilang duluan padahal blm selesai load
-      // Navigasi ke halaman kuis dengan data pertanyaan
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => QuizView(questions: questions)),
       );
     } catch (e) {
-      // Jika gagal memuat pertanyaan kuis
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('GET DATA FAILED: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memuat kuis: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
-      // Hanya set isLoading = false jika widget masih ada
       if (mounted) {
-        setState(() => isLoading = false); // Selesai loading kuis
+        setState(() => isLoading = false);
       }
     }
   }
 
+  Widget _buildDropdownContainer<T>({
+    required String label,
+    // --- PERBAIKAN DI SINI ---
+    required T? value, // Tambahkan '?' untuk mengizinkan nilai null
+    // --- SELESAI PERBAIKAN ---
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?>? onChanged,
+    bool disabled = false,
+  }) {
+    Widget dropdownWidget;
+
+    if (items.isEmpty) {
+      String text = "Memuat...";
+      if (categoryError != null) text = "Gagal memuat";
+      if (disabled) text = "-";
+
+      dropdownWidget = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14.0),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    } else {
+      dropdownWidget = DropdownButton<T>(
+        value: value,
+        isExpanded: true,
+        items: items,
+        onChanged: disabled ? null : onChanged,
+        underline: const SizedBox(),
+        icon: Icon(
+          Icons.arrow_drop_down,
+          color: disabled ? Colors.grey : Theme.of(context).primaryColor,
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: disabled ? Colors.grey.shade100 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: disabled ? Colors.grey : Colors.black54,
+            ),
+          ),
+          dropdownWidget,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isOverallLoading =
+        isLoading || isLoadingFact || isLoadingCategories;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QuizVerse'),
-        centerTitle: true,
-      ), // Judul AppBar
-      // Bungkus dengan SingleChildScrollView agar bisa discroll
+        title: const Text('Mulai Kuis Baru'),
+        automaticallyImplyLeading: false,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.stretch, // Dropdown jadi full width
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Kategori ---
-            const Text('Kategori'),
-            DropdownButton<String>(
-              value: selectedCategory,
-              isExpanded: true, //Dropdown jadi full width
-              items: categories.map((cat) {
-                return DropdownMenuItem(
-                  value: cat['id'],
-                  child: Text(cat['name']!),
-                );
-              }).toList(),
-              // Nonaktifkan dropdown saat loading kuis ATAU loading fakta
-              onChanged: isLoading || isLoadingFact
-                  ? null
-                  : (val) {
-                      setState(() => selectedCategory = val!);
-                    },
+            _buildDropdownContainer<String>(
+              label: 'Pilih Kategori',
+              value: selectedCategory, // value sekarang (String?)
+              items: categoryError != null
+                  ? []
+                  : categories.map((cat) {
+                      return DropdownMenuItem(
+                        value: cat.id.toString(),
+                        child: Text(
+                          cat.name,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      );
+                    }).toList(),
+              onChanged: (val) {
+                setState(() => selectedCategory = val!);
+              },
+              disabled: isOverallLoading,
             ),
-            const SizedBox(height: 20),
-
-            // --- Kesulitan ---
-            const Text('Kesulitan'),
-            DropdownButton<String>(
-              value: selectedDifficulty,
-              isExpanded: true,
+            if (categoryError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0, left: 12.0),
+                child: Row(
+                  children: [
+                    Text(
+                      categoryError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.refresh,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
+                      onPressed: _loadCategories,
+                      splashRadius: 16,
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            _buildDropdownContainer<String>(
+              label: 'Pilih Kesulitan',
+              value: selectedDifficulty, // value (String)
               items: difficulties.map((diff) {
                 return DropdownMenuItem(
                   value: diff['id']!,
-                  child: Text(diff['name']!),
+                  child: Text(
+                    diff['name']!,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                 );
               }).toList(),
-              // Nonaktifkan dropdown saat loading kuis ATAU loading fakta
-              onChanged: isLoading || isLoadingFact
-                  ? null
-                  : (val) {
-                      setState(() => selectedDifficulty = val!);
-                    },
+              onChanged: (val) {
+                setState(() => selectedDifficulty = val!);
+              },
+              disabled: isOverallLoading,
             ),
-            const SizedBox(height: 20),
-
-            // --- Jumlah Soal ---
-            const Text('Jumlah Soal'),
-            DropdownButton<int>(
-              value: selectedAmount, // Tipe datanya <int>
-              isExpanded: true,
+            const SizedBox(height: 16),
+            _buildDropdownContainer<int>(
+              label: 'Pilih Jumlah Soal',
+              value: selectedAmount, // value (int)
               items: amountOptions.map((amount) {
-                // Pakai list baru
                 return DropdownMenuItem(
                   value: amount,
-                  child: Text('$amount soal'),
+                  child: Text(
+                    '$amount soal',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                 );
               }).toList(),
-              // Nonaktifkan dropdown saat loading kuis ATAU loading fakta
-              onChanged: isLoading || isLoadingFact
-                  ? null
-                  : (val) {
-                      setState(() => selectedAmount = val!);
-                    },
+              onChanged: (val) {
+                setState(() => selectedAmount = val!);
+              },
+              disabled: isOverallLoading,
             ),
-            const SizedBox(height: 30),
-
-            // --- Widget Fakta Hari Ini ---
-            _buildDailyFactWidget(), // Panggil widget untuk menampilkan fakta
-            const SizedBox(height: 30),
-
-            // --- Tombol Mulai ---
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 15,
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                  ), // Ukuran teks tombol
-                ),
-                // Nonaktifkan tombol saat loading kuis ATAU loading fakta
-                onPressed: isLoading || isLoadingFact ? null : startQuiz,
-                child:
-                    isLoading // Tampilkan indikator loading jika isLoading true
-                    ? const SizedBox(
-                        height: 20, // Beri ukuran agar rapi
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white, // Warna indicator
-                          strokeWidth: 3,
-                        ),
-                      )
-                    : const Text(
-                        'Mulai Kuis',
-                      ), // Teks tombol jika tidak loading
-              ),
+            const SizedBox(height: 24),
+            _buildDailyFactWidget(),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: isOverallLoading ? null : startQuiz,
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    )
+                  : const Text('Mulai Kuis'),
             ),
           ],
         ),
@@ -235,98 +320,88 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  // --- Widget Baru: Membangun Tampilan Fakta Hari Ini ---
   Widget _buildDailyFactWidget() {
-    Widget content; // Widget yang akan ditampilkan di dalam Card
+    final theme = Theme.of(context);
+    Widget content;
 
     if (isLoadingFact) {
-      // Tampilan saat loading fakta
-      content = const Padding(
-        padding: EdgeInsets.all(15.0),
+      content = Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center, // Pusatkan konten
           children: [
             SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ), // Indikator loading kecil
-            SizedBox(width: 15),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: theme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 15),
             Text(
               "Memuat fakta menarik...",
-              style: TextStyle(color: Colors.grey),
-            ), // Teks loading
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.black54,
+              ),
+            ),
           ],
         ),
       );
     } else if (factError.isNotEmpty) {
-      // Tampilan jika terjadi error saat load fakta
       content = Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         child: Row(
           children: [
             Icon(
               Icons.warning_amber_rounded,
-              color: Colors.orange[700],
+              color: theme.colorScheme.error,
               size: 20,
-            ), // Ikon warning
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 factError,
-                style: TextStyle(color: Colors.orange[800]),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
-            ), // Tampilkan pesan error
+            ),
             IconButton(
-              // Tombol untuk mencoba load fakta lagi
               icon: Icon(Icons.refresh, color: Colors.grey[600]),
               iconSize: 22,
-              tooltip: "Coba lagi", // Teks saat hover
-              onPressed: _loadDailyFact, // Panggil fungsi load fakta lagi
-              splashRadius: 20, // Efek saat ditekan
+              tooltip: "Coba lagi",
+              onPressed: _loadDailyFact,
+              splashRadius: 20,
             ),
           ],
         ),
       );
     } else if (dailyFact != null) {
-      // Tampilan jika fakta berhasil dimuat
       content = Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // Ratakan teks ke kiri
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "💡 Fakta Hari Ini:", // Judul bagian fakta
-              style: TextStyle(
+            Text(
+              "💡 Fakta Hari Ini:",
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.indigoAccent,
-              ), // Styling judul
+                color: theme.primaryColor,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               dailyFact!,
-              style: TextStyle(color: Colors.black87),
-            ), // Tampilkan teks fakta
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
           ],
         ),
       );
     } else {
-      // Jika tidak loading, tidak error, tapi fakta = null (sebagai fallback)
-      content = const SizedBox.shrink(); // Tampilkan widget kosong
+      content = const SizedBox.shrink();
     }
 
-    // Bungkus konten dengan Card untuk tampilan yang lebih rapi
-    return Card(
-      elevation: 1.5, // Sedikit bayangan
-      margin: const EdgeInsets.symmetric(vertical: 10.0), // Jarak atas-bawah
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8), // Sudut melengkung
-        side: BorderSide(
-          color: Colors.grey.shade300,
-          width: 0.5,
-        ), // Border tipis (opsional)
-      ),
-      child: content, // Masukkan widget konten yang sudah dibuat di atas
-    );
+    return Card(color: Colors.white, child: content);
   }
 }

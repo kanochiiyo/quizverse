@@ -1,4 +1,4 @@
-// lib/views/auth/register_page.dart
+// lib/views/auth/register_view.dart
 import 'package:flutter/material.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 
@@ -14,23 +14,18 @@ class _RegisterViewState extends State<RegisterView> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final AuthController _authController =
-      AuthController(); // Instance controller
+  final AuthController _authController = AuthController();
 
-  // State dikelola di ViewState
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Fungsi yang dipanggil saat tombol Register ditekan
   void _register() async {
-    // Hapus pesan error sebelumnya
     setState(() {
       _errorMessage = null;
     });
 
-    // Validasi input di view
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
@@ -48,101 +43,82 @@ class _RegisterViewState extends State<RegisterView> {
       return;
     }
     if (password.length < 8) {
-      // Validasi panjang password
       setState(() {
         _errorMessage = "Password minimal 8 karakter!";
       });
       return;
     }
 
-    // Mulai loading
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Panggil fungsi register di controller
       await _authController.register(username: username, password: password);
 
-      // Cek mounted sebelum interaksi context/navigasi
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registrasi berhasil! Silakan login.'),
-          backgroundColor: Colors.green, // Feedback positif
+          backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context); // Kembali ke login setelah berhasil
+      Navigator.pop(context);
     } catch (e) {
-      // Tangkap error dari service/controller
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString(); // Tampilkan error
+        _errorMessage = e.toString();
       });
     } finally {
-      // Pastikan setState dipanggil hanya jika widget masih ada
       if (mounted) {
         setState(() {
           _isLoading = false;
-        }); // Sembunyikan loading
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Definisikan warna tema
-    const Color primaryBrown = Color(0xFF3E2723);
-    const Color secondaryBrown = Color(0xFF795548);
-    const Color lightBrown = Color(0xFF8D6E63);
-    const Color borderBrown = Color(0xFFA1887F);
+    // Ambil tema global
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      // AppBar agar ada tombol kembali otomatis
       appBar: AppBar(
-        title: const Text('Buat Akun QuizRealm'),
-        backgroundColor: primaryBrown, // Sesuaikan warna AppBar
-        foregroundColor: Colors.white,
+        title: const Text('Buat Akun Baru'),
+        // Warna AppBar otomatis dari tema global
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24.0), // Padding konsisten
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Registrasi Akun Baru',
-                style: TextStyle(
-                  fontSize: 24,
+              Text(
+                'Selamat Bergabung!',
+                style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: primaryBrown,
+                  color: colorScheme.primary,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 8),
+              Text(
+                'Buat akun QuizVerse Anda',
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
               // --- Username ---
               TextField(
                 controller: _usernameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: "Username",
-                  labelStyle: const TextStyle(color: lightBrown),
-                  prefixIcon: const Icon(Icons.person, color: secondaryBrown),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: borderBrown),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: lightBrown, width: 2),
-                  ),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                  ),
-                ),
-                cursorColor: lightBrown,
-                style: const TextStyle(color: primaryBrown),
-                enabled: !_isLoading, // Disable saat loading
+                  prefixIcon: Icon(Icons.person),
+                ), // Otomatis pakai tema
+                enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
               // --- Password ---
@@ -151,25 +127,12 @@ class _RegisterViewState extends State<RegisterView> {
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: "Password",
-                  labelStyle: const TextStyle(color: lightBrown),
-                  prefixIcon: const Icon(Icons.lock, color: secondaryBrown),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: borderBrown),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: lightBrown, width: 2),
-                  ),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                  ),
+                  prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
                           ? Icons.visibility_off
                           : Icons.visibility,
-                      color: secondaryBrown,
                     ),
                     onPressed: () {
                       setState(() {
@@ -178,8 +141,6 @@ class _RegisterViewState extends State<RegisterView> {
                     },
                   ),
                 ),
-                cursorColor: lightBrown,
-                style: const TextStyle(color: primaryBrown),
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
@@ -189,28 +150,12 @@ class _RegisterViewState extends State<RegisterView> {
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: "Konfirmasi Password",
-                  labelStyle: const TextStyle(color: lightBrown),
-                  prefixIcon: const Icon(
-                    Icons.lock_outline,
-                    color: secondaryBrown,
-                  ), // Icon berbeda sedikit
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: borderBrown),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-                    borderSide: const BorderSide(color: lightBrown, width: 2),
-                  ),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                  ),
+                  prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword
                           ? Icons.visibility_off
                           : Icons.visibility,
-                      color: secondaryBrown,
                     ),
                     onPressed: () {
                       setState(() {
@@ -219,35 +164,22 @@ class _RegisterViewState extends State<RegisterView> {
                     },
                   ),
                 ),
-                cursorColor: lightBrown,
-                style: const TextStyle(color: primaryBrown),
                 enabled: !_isLoading,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               // --- Error Message ---
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: colorScheme.error, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ),
               // --- Tombol Register ---
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBrown,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                // Panggil _register saat ditekan
+                // Otomatis pakai tema
                 onPressed: _isLoading ? null : _register,
                 child: _isLoading
                     ? const SizedBox(
@@ -258,17 +190,15 @@ class _RegisterViewState extends State<RegisterView> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text("Register", style: TextStyle(fontSize: 16)),
+                    : const Text("Register"),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 16),
               // --- Tombol Kembali ke Login ---
               TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () => Navigator.pop(context), // Kembali ke login
-                child: const Text(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                child: Text(
                   'Sudah punya akun? Login di sini',
-                  style: TextStyle(color: secondaryBrown),
+                  style: TextStyle(color: colorScheme.secondary),
                 ),
               ),
             ],

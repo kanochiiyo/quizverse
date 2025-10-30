@@ -1,11 +1,12 @@
+// lib/views/home/quiz_view.dart
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/models/quiz_model.dart';
-import 'package:quizverse/services/database_helper.dart';
+import 'package:quizverse/services/database_service.dart';
+import 'package:geocoding/geocoding.dart' as geocoding;
 
 class QuizView extends StatefulWidget {
-  // Data dari HomeView dan bikin constructor
   final List<QuizModel> questions;
   const QuizView({super.key, required this.questions});
 
@@ -16,20 +17,21 @@ class QuizView extends StatefulWidget {
 class _QuizViewState extends State<QuizView> {
   int _curIndex = 0;
   String? selectedAnswer;
-  // Penampungan untuk jawaban user (menggunakan map, key:value) dan tempat untuk jawaban yang sudah diacak
   final Map<int, String?> _userAnswers = {};
   late List<String> _shuffledAnswers;
 
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final DatabaseService _databaseService = DatabaseService();
   final AuthController _authController = AuthController();
   Position? _currentPosition;
-  
+
+  bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    // Pertama kali widget dibuat langsung panggil _setupQuestion
-    _setupQuestion();
+    if (widget.questions.isNotEmpty) {
+      _setupQuestion();
+    }
     _getCurrentLocation();
   }
 
@@ -37,33 +39,33 @@ class _QuizViewState extends State<QuizView> {
     final q = widget.questions[_curIndex];
     _shuffledAnswers = [q.correctAnswer, ...q.incorrectAnswers];
     _shuffledAnswers.shuffle();
-
     selectedAnswer = _userAnswers[_curIndex];
   }
 
   void nextQuestion() {
-    setState(() {
-      _curIndex++;
-      _setupQuestion();
-    });
+    if (_curIndex < widget.questions.length - 1) {
+      setState(() {
+        _curIndex++;
+        _setupQuestion();
+      });
+    }
   }
 
   void prevQuestion() {
-    setState(() {
-      _curIndex--;
-      _setupQuestion();
-    });
+    if (_curIndex > 0) {
+      setState(() {
+        _curIndex--;
+        _setupQuestion();
+      });
+    }
   }
 
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users to enable the location services.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -73,18 +75,13 @@ class _QuizViewState extends State<QuizView> {
           ),
         );
       }
-      return; // Tidak menghentikan kuis, hanya tidak dapat lokasi
+      return;
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true). According to Android guidelines
-        // your App should show an explanatory UI now.
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -95,7 +92,6 @@ class _QuizViewState extends State<QuizView> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -108,11 +104,9 @@ class _QuizViewState extends State<QuizView> {
       return;
     }
 
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
     try {
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium, // Akurasi sedang cukup
+        desiredAccuracy: LocationAccuracy.medium,
       );
       if (mounted) {
         setState(() {
@@ -133,7 +127,7 @@ class _QuizViewState extends State<QuizView> {
   }
 
   void submitQuiz() async {
-
+    setState(() => _isSubmitting = true);
     int score = 0;
     for (int i = 0; i < widget.questions.length; i++) {
       if (_userAnswers[i] == widget.questions[i].correctAnswer) {
@@ -145,118 +139,237 @@ class _QuizViewState extends State<QuizView> {
       await _getCurrentLocation();
     }
 
-    // Save history quiz
+    String? address;
+    if (_currentPosition != null) {
+      try {
+        // Panggil package geocoding
+        List<geocoding.Placemark> placemarks = await geocoding
+            .placemarkFromCoordinates(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+            );
+
+        if (placemarks.isNotEmpty) {
+          final placemark = placemarks.first;
+          // Buat format alamat yang rapi (bisa disesuaikan)
+          address =
+              "${placemark.subLocality}, ${placemark.locality}, ${placemark.subAdministrativeArea}";
+          // Hilangkan "null" atau "Kecamatan " yang tidak perlu jika ada
+          address = address
+              .replaceAll("null, ", "")
+              .replaceAll("Kecamatan ", "");
+          debugPrint("Address obtained: $address");
+        }
+      } catch (e) {
+        debugPrint("Error getting address from geocoding: $e");
+        address = null; // Gagal mendapatkan alamat
+      }
+    }
+
     try {
       final String? userIdString = await _authController.getLoggedInUserId();
       if (userIdString != null && widget.questions.isNotEmpty) {
         final int userId = int.parse(userIdString);
-        final firstQuestion = widget.questions.first; // Ambil info dari soal pertama
+        final firstQuestion = widget.questions.first;
 
-        await _dbHelper.saveQuizResult(
+        await _databaseService.saveQuizResult(
           userId: userId,
-          // Ambil nama kategori dari API response jika ada, atau gunakan ID jika tidak
-          // Misalnya kita simpan nama kategori jika ada di model:
-          category: firstQuestion.category, // Asumsi QuizModel punya nama kategori
+          category: firstQuestion.category,
           difficulty: firstQuestion.difficulty,
           score: score,
           totalQuestions: widget.questions.length,
-          latitude: _currentPosition?.latitude, 
+          latitude: _currentPosition?.latitude,
           longitude: _currentPosition?.longitude,
+          address: address,
         );
-         debugPrint("Quiz result saved successfully!"); // Optional logging
+        debugPrint("Quiz result saved successfully!");
       } else {
-        debugPrint("User ID not found or questions empty, couldn't save history.");
+        debugPrint(
+          "User ID not found or questions empty, couldn't save history.",
+        );
       }
     } catch (e) {
       debugPrint("Error saving quiz result: $e");
-      // Tampilkan pesan error ke user jika perlu
-      if(mounted){
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Gagal menyimpan riwayat: ${e.toString()}'))
+          SnackBar(content: Text('Gagal menyimpan riwayat: ${e.toString()}')),
         );
       }
     }
 
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+    }
+
     // Dialog skor
+    if (!mounted) return;
     showDialog(
       context: context,
+      barrierDismissible: false, // User harus klik OK
       builder: (context) => AlertDialog(
-        title: Text("You did great!"),
-        content: Text("Skor: $score"),
+        title: const Text("Kuis Selesai!"),
+        content: Text("Skor Anda: $score dari ${widget.questions.length}"),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Tutup dialog
+              Navigator.pop(context); // Kembali ke halaman Home
             },
-            child: Text("OK"),
+            child: const Text("OK"),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildAnswerTile(String answer) {
+    final bool isSelected = selectedAnswer == answer;
+    final theme = Theme.of(context);
+
+    return Card(
+      // CardTheme akan dipakai dari global
+      elevation: isSelected ? 4.0 : 1.5,
+      color: isSelected ? theme.primaryColor.withOpacity(0.1) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isSelected ? theme.primaryColor : Colors.grey.shade300,
+          width: isSelected ? 1.5 : 0.5,
+        ),
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            selectedAnswer = answer;
+            _userAnswers[_curIndex] = answer;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  answer,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Tampilkan ikon centang jika dipilih
+              if (isSelected)
+                Icon(Icons.check_circle, color: theme.primaryColor, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final q = widget.questions[_curIndex];
-
     if (widget.questions.isEmpty) {
-      return const Center(child: Text('Belum ada pertanyaan'));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: const Center(
+          child: Text('Gagal memuat pertanyaan. Silakan coba lagi.'),
+        ),
+      );
     }
+
+    final q = widget.questions[_curIndex];
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Soal ${_curIndex + 1} dari ${widget.questions.length}'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(q.question),
-            const SizedBox(height: 30),
-            Column(
-              children: _shuffledAnswers.map((answer) {
-                return RadioListTile<String>(
-                  title: Text(answer),
-                  value: answer,
-                  // Variabel yang menyimpan pilihan user
-                  groupValue: selectedAnswer,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedAnswer = value;
-                      _userAnswers[_curIndex] = value;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            // Text(q.correctAnswer),
-            // Text(q.incorrectAnswers[0]),
-            // const SizedBox(height: 30),
-            // Text(q.incorrectAnswers[1]),
-            // const SizedBox(height: 30),
-            // Text(q.incorrectAnswers[2]),
-            const SizedBox(height: 30),
-            Row(
-              children: [
-                if (_curIndex > 0)
-                  ElevatedButton(
-                    onPressed: prevQuestion,
-                    child: const Icon(Icons.arrow_back_ios),
-                  ),
-                const SizedBox(width: 30),
-                ElevatedButton(
-                  onPressed: _curIndex < widget.questions.length - 1
-                      ? nextQuestion
-                      : submitQuiz,
-                  child: Icon(
-                    _curIndex < widget.questions.length - 1
-                        ? Icons.arrow_forward_ios
-                        : Icons.send,
-                  ),
+            // Kontainer Pertanyaan
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                q.question,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Pilihan Jawaban
+            ..._shuffledAnswers.map((answer) {
+              return _buildAnswerTile(answer);
+            }),
+          ],
+        ),
+      ),
+      // Tombol Navigasi Bawah
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Tombol Kembali
+            ElevatedButton.icon(
+              // Disable jika sedang submit ATAU di soal pertama
+              onPressed: (_isSubmitting || _curIndex == 0)
+                  ? null
+                  : prevQuestion,
+              icon: const Icon(Icons.navigate_before),
+              label: const Text("Kembali"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: theme.primaryColor,
+                side: BorderSide(color: theme.primaryColor),
+                disabledBackgroundColor: Colors.grey.shade200,
+              ),
+            ),
+
+            // Tombol Lanjut / Selesai
+            ElevatedButton.icon(
+              onPressed: _isSubmitting
+                  ? null
+                  : // Disable jika sedang submit
+                    (_curIndex < widget.questions.length - 1
+                        ? nextQuestion
+                        : submitQuiz),
+              icon:
+                  _isSubmitting // Tampilkan loading jika sedang submit
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Icon(
+                      _curIndex < widget.questions.length - 1
+                          ? Icons.navigate_next
+                          : Icons.check,
+                    ),
+              label: Text(
+                _isSubmitting
+                    ? "Menyimpan..."
+                    : (_curIndex < widget.questions.length - 1
+                          ? "Lanjut"
+                          : "Selesai"),
+              ),
             ),
           ],
         ),

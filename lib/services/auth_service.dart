@@ -1,10 +1,10 @@
-import 'package:quizverse/services/database_helper.dart';
+import 'package:quizverse/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AuthService {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final DatabaseService _dbHelper = DatabaseService();
 
   // SharedPreferences key (session)
   final String _loginStatusKey = 'isLoggedIn';

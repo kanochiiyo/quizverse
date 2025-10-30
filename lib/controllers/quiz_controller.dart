@@ -1,8 +1,13 @@
+import 'package:quizverse/models/category_model.dart';
 import 'package:quizverse/models/quiz_model.dart';
 import 'package:quizverse/services/quiz_service.dart';
 
 class QuizController {
   final QuizService _service = QuizService();
+
+  Future<List<CategoryModel>> loadCategories() async {
+    return await _service.fetchCategories();
+  }
 
   Future<List<QuizModel>> loadQuestions({
     required int amount,

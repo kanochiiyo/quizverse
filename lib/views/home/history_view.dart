@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:quizverse/controllers/auth_controller.dart'; // To get user ID
-import 'package:quizverse/services/database_helper.dart'; // To get history
+import 'package:quizverse/services/database_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -11,7 +11,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final DatabaseService _dbHelper = DatabaseService();
   final AuthController _authController = AuthController();
   List<Map<String, dynamic>> _quizHistory = [];
   bool _isLoading = true;
@@ -119,75 +119,101 @@ class _HistoryPageState extends State<HistoryPage> {
         final date = historyItem['quiz_date'] as String?;
         final latitude = historyItem['latitude'] as double?;
         final longitude = historyItem['longitude'] as double?;
+        final address = historyItem['address'] as String?;
 
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
-            // Leading icon based on score maybe? (Optional)
-            leading: Icon(
-              Icons.history_edu, // Generic history icon
-              color: Theme.of(context).primaryColor,
-            ),
-            title: Text(
-              category ?? 'Kategori Tidak Diketahui',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text('Skor: ${score ?? '?'} / ${totalQuestions ?? '?'}'),
-                Text(
-                  'Kesulitan: ${difficulty != null ? capitalize(difficulty) : '?'}',
-                ),
-                Text(_formatDate(date)),
-                if (latitude != null && longitude != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Row(
-                      // Gunakan Row agar ikon sejajar teks
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
-                          style: TextStyle(
-                            fontSize: 12,
+        final theme = Theme.of(context);
+
+        return Padding(
+          padding: EdgeInsetsGeometry.all(12),
+          child: Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              leading: Icon(
+                Icons.history_edu,
+                color: theme.primaryColor,
+                size: 36, // Sedikit lebih besar
+              ),
+              title: Text(
+                category ?? 'Kategori Tidak Diketahui',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    'Kesulitan: ${difficulty != null ? capitalize(difficulty) : '?'}',
+                  ),
+                  Text(_formatDate(date)),
+
+                  // --- TAMPILAN LOKASI BARU ---
+                  if (address != null && address.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.grey[700],
+                          ),
+                          const SizedBox(width: 4),
+                          // Tampilkan alamat
+                          Expanded(
+                            child: Text(
+                              address,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  // Fallback jika alamat null tapi ada Lat/Long
+                  else if (latitude != null && longitude != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
                             color: Colors.grey[600],
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            ),
-            // Trailing could show score percentage or difficulty icon (Optional)
-            trailing: Chip(
-              label: Text(
-                '${score ?? '?'} / ${totalQuestions ?? '?'}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12, // Smaller font size for Chip
-                ),
+                  // --- AKHIR TAMPILAN LOKASI BARU ---
+                ],
               ),
-              backgroundColor: Theme.of(context).primaryColorLight,
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              trailing: Chip(
+                label: Text(
+                  '${score ?? '?'} / ${totalQuestions ?? '?'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                // --- GANTI WARNA CHIP ---
+                backgroundColor: theme.primaryColor, // <-- WARNA BARU
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              ),
             ),
-            // You can add onTap later to show details
-            // onTap: () {
-            //   // Navigate to detail view if needed
-            // },
           ),
         );
       },

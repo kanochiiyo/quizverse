@@ -3,10 +3,10 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
-class DatabaseHelper {
-  static final DatabaseHelper _instance = DatabaseHelper._internal();
-  factory DatabaseHelper() => _instance;
-  DatabaseHelper._internal();
+class DatabaseService {
+  static final DatabaseService _instance = DatabaseService._internal();
+  factory DatabaseService() => _instance;
+  DatabaseService._internal();
 
   static Database? _database;
 
@@ -18,7 +18,7 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, 'quizrealm.db');
+    String path = join(documentsDirectory.path, 'quizverse.db');
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
@@ -44,6 +44,7 @@ class DatabaseHelper {
         quiz_date TEXT DEFAULT CURRENT_TIMESTAMP,
         latitude REAL, 
         longitude REAL,
+        address TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
@@ -58,6 +59,7 @@ class DatabaseHelper {
     required int totalQuestions,
     double? latitude, 
     double? longitude,
+    String? address,
   }) async {
     final db = await database;
     await db.insert('quiz_history', {
@@ -68,6 +70,7 @@ class DatabaseHelper {
       'total_questions': totalQuestions,
       'latitude': latitude,
       'longitude': longitude,
+      'address': address,
       // quiz_date akan diisi otomatis oleh DEFAULT CURRENT_TIMESTAMP
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }

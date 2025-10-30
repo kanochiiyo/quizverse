@@ -1,37 +1,26 @@
 import 'package:flutter/material.dart';
 
-// Class tetap StatelessWidget
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Ambil ThemeData untuk styling
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-
-    // Placeholder teks Lorem Ipsum
-    const String loremIpsum =
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tentang Aplikasi'),
         automaticallyImplyLeading: false,
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        // AppBar otomatis pakai tema
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(15.0),
+        padding: const EdgeInsets.all(16.0), // Padding konsisten
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Card Informasi Aplikasi (Tetap Sama) ---
+            // --- Card Informasi Aplikasi ---
             Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              // Otomatis pakai CardTheme
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -69,14 +58,10 @@ class AboutPage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
 
-            // --- Card Informasi Developer (Tetap Sama) ---
+            // --- Card Informasi Developer (DIUBAH) ---
             Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -99,94 +84,73 @@ class AboutPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 15),
-                    _buildDeveloperInfoRow(
-                      Icons.account_circle,
-                      'Nama',
-                      'Kanochiiyo',
+
+                    // --- GANTI DENGAN LISTTILE ---
+                    ListTile(
+                      leading: Icon(
+                        Icons.account_circle,
+                        color: colorScheme.secondary,
+                      ),
+                      title: const Text('Nama'),
+                      subtitle: const Text('Andini Andaresta'),
+                      dense: true,
                     ),
-                    const SizedBox(height: 10),
-                    _buildDeveloperInfoRow(
-                      Icons.school,
-                      'Institusi',
-                      'UPN Veteran Yogyakarta',
+                    ListTile(
+                      leading: Icon(
+                        Icons.numbers,
+                        color: colorScheme.secondary,
+                      ),
+                      title: const Text('NIM'),
+                      subtitle: const Text('124230084'),
+                      dense: true,
                     ),
-                    const SizedBox(height: 10),
-                    _buildDeveloperInfoRow(
-                      Icons.code,
-                      'Proyek',
-                      'Pemrograman Aplikasi Mobile (TAI)',
-                    ),
+                    // --- AKHIR PERUBAHAN ---
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 25), // Jarak ke card baru
-            // --- Card Kesan & Pesan (Baru) ---
+            const SizedBox(height: 20),
+
+            // --- Card Kesan & Pesan ---
             Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      // Baris untuk Ikon dan Judul
                       children: [
                         Icon(
                           Icons.rate_review_outlined,
                           size: 28,
-                          color: Colors.teal,
-                        ), // Ikon kesan/pesan
+                          color: Colors.teal, // Tetap teal, cocok
+                        ),
                         const SizedBox(width: 10),
                         Text(
-                          'Kesan & Pesan', // Judul Card
+                          'Kesan & Pesan',
                           style: textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 15), // Jarak ke teks
+                    const SizedBox(height: 15),
                     Text(
-                      loremIpsum, // Tampilkan teks placeholder
-                      textAlign: TextAlign.justify, // Ratakan teks kiri-kanan
+                      "BAGUS B NYA BOORIED",
+                      textAlign: TextAlign.justify,
                       style: textTheme.bodyMedium?.copyWith(
                         height: 1.5,
                         color: Colors.black87,
-                      ), // Styling teks
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20), // Jarak di bawah card terakhir
+            const SizedBox(height: 20),
           ],
         ),
       ),
-    );
-  }
-
-  // Helper widget (tetap sama)
-  Widget _buildDeveloperInfoRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[700]),
-        const SizedBox(width: 12),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-          ),
-        ),
-        Expanded(
-          child: Text(value, style: TextStyle(color: Colors.grey[800])),
-        ),
-      ],
     );
   }
 }
