@@ -101,21 +101,63 @@ class _HistoryPageState extends State<HistoryPage> {
     });
   }
 
-  // Helper function to format the date string
+  // Helper function to format the date string (FIXED)
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Tanggal tidak diketahui';
     try {
+      // 1. "2025-10-31 10:00:00" -> "2025-10-31T10:00:00Z"
       final isoUtcString = dateString.replaceFirst(' ', 'T') + "Z";
-      final dateTime = DateTime.parse(isoUtcString);
-      // Format: Hari, Tanggal Bulan Tahun Jam:Menit (e.g., Sen, 30 Okt 2025 10:30)
-      return DateFormat('EEE, d MMM yyyy HH:mm', 'id_ID').format(dateTime);
+      // 2. Parse ke UTC
+      final utcDateTime = DateTime.parse(isoUtcString);
+      // 3. Konversi ke Lokal (WIB)
+      final localDateTime = utcDateTime.toLocal();
+      // 4. Format
+      return DateFormat('EEE, d MMM yyyy HH:mm', 'id_ID').format(localDateTime);
     } catch (e) {
       return dateString; // Return original string if parsing fails
     }
   }
 
+  // Helper function untuk format durasi
+  String _formatDuration(int? totalSeconds) {
+    if (totalSeconds == null || totalSeconds < 0) {
+      return '?';
+    }
+    final duration = Duration(seconds: totalSeconds);
+    final minutes = duration.inMinutes;
+    final seconds = totalSeconds % 60;
+
+    String durationString = '';
+    if (minutes > 0) {
+      durationString += '${minutes}m ';
+    }
+    durationString += '${seconds}d';
+    return durationString;
+  }
+
   // Helper function to capitalize the first letter
   String capitalize(String s) => s[0].toUpperCase() + s.substring(1);
+
+  // Helper widget untuk konsistensi UI
+  Widget _buildInfoRow(IconData icon, String text) {
+    // Helper ini untuk menyeragamkan tampilan baris info
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[700]),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +166,6 @@ class _HistoryPageState extends State<HistoryPage> {
         title: const Text('Riwayat Kuis'),
         automaticallyImplyLeading: false, // Remove back button
       ),
-
       body: Column(
         children: [
           // Search Bar
@@ -203,6 +244,8 @@ class _HistoryPageState extends State<HistoryPage> {
         final longitude = historyItem['longitude'] as double?;
         final address = historyItem['address'] as String?;
 
+        // PENTING: Membaca 'duration' (sesuai DB), bukan 'duration_seconds'
+        final durationInSeconds = historyItem['duration'] as int?;
         final theme = Theme.of(context);
 
         return Padding(
@@ -226,56 +269,30 @@ class _HistoryPageState extends State<HistoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  Text(
+                  // Menggunakan helper widget _buildInfoRow
+                  _buildInfoRow(
+                    Icons.layers_outlined,
                     'Kesulitan: ${difficulty != null ? capitalize(difficulty) : '?'}',
                   ),
-                  Text(_formatDate(date)),
+
+                  _buildInfoRow(
+                    Icons.calendar_today_outlined,
+                    _formatDate(date),
+                  ),
+
+                  if (durationInSeconds != null && durationInSeconds > 0)
+                    _buildInfoRow(
+                      Icons.timer_outlined,
+                      "Durasi: ${_formatDuration(durationInSeconds)}",
+                    ),
 
                   if (address != null && address.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: Colors.grey[700],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              address,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                    _buildInfoRow(Icons.location_on_outlined, address)
                   // Fallback jika alamat null tapi ada Lat/Long
                   else if (latitude != null && longitude != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildInfoRow(
+                      Icons.location_on_outlined,
+                      '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
                     ),
                 ],
               ),

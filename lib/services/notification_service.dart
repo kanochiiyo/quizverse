@@ -2,7 +2,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:quizverse/services/database_service.dart';
 import 'package:quizverse/services/navigation_service.dart';
 import 'package:quizverse/views/home/history_detail_view.dart';
-import 'package:quizverse/views/home/history_view.dart';
 import 'package:flutter/material.dart';
 
 class NotificationService {

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
@@ -20,12 +22,15 @@ class _QuizViewState extends State<QuizView> {
   String? selectedAnswer;
   final Map<int, String?> _userAnswers = {};
   late List<String> _shuffledAnswers;
-
+  Position? _currentPosition;
+  bool _isSubmitting = false;
+  late DateTime _quizStartTime;
+  Timer? _questionTimer;
+  static const int _maxDurationPerQuestion = 10;
+  int _timerSecond = _maxDurationPerQuestion;
   final DatabaseService _databaseService = DatabaseService();
   final AuthController _authController = AuthController();
-  Position? _currentPosition;
-
-  bool _isSubmitting = false;
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
@@ -33,6 +38,12 @@ class _QuizViewState extends State<QuizView> {
     if (widget.questions.isNotEmpty) {
       _setupQuestion();
     }
+    _quizStartTime = DateTime.now();
+    _startQuestionTimer();
+
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
   }
 
   void _setupQuestion() {
@@ -48,15 +59,7 @@ class _QuizViewState extends State<QuizView> {
         _curIndex++;
         _setupQuestion();
       });
-    }
-  }
-
-  void prevQuestion() {
-    if (_curIndex > 0) {
-      setState(() {
-        _curIndex--;
-        _setupQuestion();
-      });
+      _startQuestionTimer();
     }
   }
 
@@ -104,6 +107,10 @@ class _QuizViewState extends State<QuizView> {
   }
 
   void submitQuiz() async {
+    final quizDuration = DateTime.now().difference(_quizStartTime);
+    final int durationInSeconds = quizDuration.inSeconds;
+    _questionTimer?.cancel();
+
     setState(() => _isSubmitting = true);
     int score = 0;
     for (int i = 0; i < widget.questions.length; i++) {
@@ -155,7 +162,7 @@ class _QuizViewState extends State<QuizView> {
 
     String? answersJson;
     try {
-     final Map<String, String?> stringKeyedAnswers = _userAnswers.map((
+      final Map<String, String?> stringKeyedAnswers = _userAnswers.map((
         key,
         value,
       ) {
@@ -169,14 +176,12 @@ class _QuizViewState extends State<QuizView> {
     try {
       final String? userIdString = await _authController.getLoggedInUserId();
       if (userIdString != null && widget.questions.isNotEmpty) {
-        final int userId = int.parse(userIdString);
-        final firstQuestion = widget.questions.first;
-
-       final int newHistoryId = await _databaseService.saveQuizResult(
+        final int newHistoryId = await _databaseService.saveQuizResult(
           userId: int.parse(userIdString),
           category: widget.questions.first.category,
           difficulty: widget.questions.first.difficulty,
           score: score,
+          duration: durationInSeconds,
           totalQuestions: widget.questions.length,
           latitude: _currentPosition?.latitude,
           longitude: _currentPosition?.longitude,
@@ -186,7 +191,6 @@ class _QuizViewState extends State<QuizView> {
         );
         debugPrint("Quiz result saved successfully! History ID: $newHistoryId");
 
-      
         await NotificationService().showQuizResultNotification(
           newHistoryId,
           score,
@@ -209,6 +213,8 @@ class _QuizViewState extends State<QuizView> {
     if (mounted) {
       setState(() => _isSubmitting = false);
     }
+
+    _confettiController.play();
 
     // Dialog skor
     if (!mounted) return;
@@ -280,6 +286,7 @@ class _QuizViewState extends State<QuizView> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     if (widget.questions.isEmpty) {
       return Scaffold(
@@ -293,96 +300,176 @@ class _QuizViewState extends State<QuizView> {
     final q = widget.questions[_curIndex];
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Soal ${_curIndex + 1} dari ${widget.questions.length}'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Kontainer Pertanyaan
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Text(
-                q.question,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w500,
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Soal ${_curIndex + 1} dari ${widget.questions.length}',
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              // <-- Semua konten kuis masuk ke dalam children Column ini
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- WIDGET TIMER ---
+                LinearProgressIndicator(
+                  value:
+                      _timerSecond /
+                      _maxDurationPerQuestion, // Persentase sisa waktu
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                  minHeight: 10, // Agar lebih tebal
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                Text(
+                  "Waktu Tersisa: $_timerSecond detik",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: _timerSecond <= 10
+                        ? Colors.redAccent
+                        : theme.primaryColor, // Warna merah jika <= 10 detik
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign:
+                      TextAlign.center, // <-- Saya tambahkan ini agar rapi
+                ),
 
-            // Pilihan Jawaban
-            ..._shuffledAnswers.map((answer) {
-              return _buildAnswerTile(answer);
-            }),
-          ],
-        ),
-      ),
-      // Tombol Navigasi Bawah
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Tombol Kembali
-            ElevatedButton.icon(
-              // Disable jika sedang submit ATAU di soal pertama
-              onPressed: (_isSubmitting || _curIndex == 0)
-                  ? null
-                  : prevQuestion,
-              icon: const Icon(Icons.navigate_before),
-              label: const Text("Kembali"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: theme.primaryColor,
-                side: BorderSide(color: theme.primaryColor),
-                disabledBackgroundColor: Colors.grey.shade200,
-              ),
-            ),
-
-            // Tombol Lanjut / Selesai
-            ElevatedButton.icon(
-              onPressed: _isSubmitting
-                  ? null
-                  : // Disable jika sedang submit
-                    (_curIndex < widget.questions.length - 1
-                        ? nextQuestion
-                        : submitQuiz),
-              icon:
-                  _isSubmitting // Tampilkan loading jika sedang submit
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Icon(
-                      _curIndex < widget.questions.length - 1
-                          ? Icons.navigate_next
-                          : Icons.check,
+                const SizedBox(
+                  height: 16,
+                ), // <-- Kasih jarak dari timer ke soal
+                // --- KONTENER PERTANYAAN (PINDAHKAN KE SINI) ---
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    q.question,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
-              label: Text(
-                _isSubmitting
-                    ? "Menyimpan..."
-                    : (_curIndex < widget.questions.length - 1
-                          ? "Lanjut"
-                          : "Selesai"),
-              ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // --- PILIHAN JAWABAN (PINDAHKAN KE SINI) ---
+                ..._shuffledAnswers.map((answer) {
+                  return _buildAnswerTile(answer);
+                }),
+              ],
             ),
-          ],
+          ),
+          // Tombol Navigasi Bawah
+          bottomNavigationBar: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Tombol Kembali
+                ElevatedButton.icon(
+                  onPressed: _isSubmitting
+                      ? null
+                      : (_curIndex < widget.questions.length - 1
+                            ? nextQuestion
+                            : submitQuiz),
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Icon(
+                          _curIndex < widget.questions.length - 1
+                              ? Icons.navigate_next
+                              : Icons.check,
+                        ),
+                  label: Text(
+                    _isSubmitting
+                        ? "Menyimpan..."
+                        : (_curIndex < widget.questions.length - 1
+                              ? "Lanjut"
+                              : "Selesai"),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive, // Menyebar
+            shouldLoop: false,
+            numberOfParticles: 20,
+            gravity: 0.3,
+            emissionFrequency: 0.05,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  void _startQuestionTimer() {
+    // Reset detik
+    _timerSecond = _maxDurationPerQuestion;
+    // Batalkan timer sebelumnya jika ada
+    _questionTimer?.cancel();
+
+    _questionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_timerSecond > 0) {
+        // Jika timer masih berjalan, panggil setState HANYA untuk update UI timer
+        setState(() {
+          _timerSecond--;
+        });
+      } else {
+        // Jika timer sudah 0:
+        // 1. Batalkan timer
+        timer.cancel();
+
+        // 2. Panggil _handleTimeout() DI LUAR setState()
+        // Ini akan memanggil submitQuiz() dengan aman tanpa mengunci UI
+        _handleTimeout();
+      }
+    });
+  }
+
+  void _handleTimeout() {
+    // Tandai sebagai tidak dijawab (null)
+    _userAnswers.putIfAbsent(_curIndex, () => null);
+
+    if (_curIndex < widget.questions.length - 1) {
+      nextQuestion(); // Pindah ke soal berikutnya
+    } else {
+      submitQuiz(); // Langsung submit jika ini soal terakhir
+    }
+  }
+
+  // Pastikan timer dibatalkan saat pindah halaman
+  @override
+  void dispose() {
+    _questionTimer?.cancel();
+    _confettiController.dispose();
+    super.dispose();
   }
 }

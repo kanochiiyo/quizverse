@@ -88,7 +88,6 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
 
     // Ambil info utama dari riwayat
     final category = widget.historyItem['category'] ?? 'Detail Riwayat';
-    final score = widget.historyItem['score'];
     final total = widget.historyItem['total_questions'];
 
     return Scaffold(
@@ -156,7 +155,7 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
                           ),
 
                         // Tampilkan jawaban yang benar (jika jawaban pengguna salah DAN tidak kosong)
-                        if (!isCorrect && userAnswer != null) ...[
+                        if (!isCorrect) ...[
                           const SizedBox(height: 12),
                           Text(
                             "Jawaban Benar:",
