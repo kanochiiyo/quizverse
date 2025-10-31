@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:quizverse/views/auth/login_view.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:quizverse/services/notification_service.dart';
+import 'package:quizverse/services/navigation_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await initializeDateFormatting('id_ID', null);
+  
   tz.initializeTimeZones();
   Intl.defaultLocale = 'id_ID';
 
@@ -14,9 +20,11 @@ void main() async {
     print("Default location set to: ${tz.local.name}");
   } catch (e) {
     print("Error setting default location: $e. Using default UTC.");
-    // Fallback ke UTC jika gagal
     tz.setLocalLocation(tz.UTC);
   }
+
+  // Inisialisasi Notifikasi (Anda sudah punya ini)
+  await NotificationService().initNotifications();
 
   runApp(const MyApp());
 }
@@ -32,6 +40,7 @@ class MyApp extends StatelessWidget {
     const Color backgroundColor = Color(0xFFF5F5F5);
 
     return MaterialApp(
+      navigatorKey: NavigationService.navigatorKey,
       title: 'QuizVerse',
       theme: ThemeData(
         brightness: Brightness.light,
@@ -86,8 +95,6 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(12.0)),
           ),
         ),
-
-        
 
         // Tema untuk Bottom Nav Bar
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(

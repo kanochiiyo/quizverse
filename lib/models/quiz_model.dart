@@ -39,4 +39,15 @@ class QuizModel {
       incorrectAnswers: incorrectAnswers,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'difficulty': difficulty,
+      'category': category,
+      'question': question,
+      'correct_answer': correctAnswer,
+      'incorrect_answers': incorrectAnswers,
+    };
+  }
 }

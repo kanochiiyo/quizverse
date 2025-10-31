@@ -1,10 +1,11 @@
-// lib/views/home/quiz_view.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/models/quiz_model.dart';
 import 'package:quizverse/services/database_service.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:quizverse/services/notification_service.dart';
 
 class QuizView extends StatefulWidget {
   final List<QuizModel> questions;
@@ -32,7 +33,6 @@ class _QuizViewState extends State<QuizView> {
     if (widget.questions.isNotEmpty) {
       _setupQuestion();
     }
-    _getCurrentLocation();
   }
 
   void _setupQuestion() {
@@ -66,15 +66,6 @@ class _QuizViewState extends State<QuizView> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Layanan lokasi dimatikan. Aktifkan untuk menyimpan lokasi kuis.',
-            ),
-          ),
-        );
-      }
       return;
     }
 
@@ -82,25 +73,11 @@ class _QuizViewState extends State<QuizView> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak.')));
-        }
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Izin lokasi ditolak permanen, kami tidak bisa meminta izin lagi.',
-            ),
-          ),
-        );
-      }
       return;
     }
 
@@ -142,7 +119,6 @@ class _QuizViewState extends State<QuizView> {
     String? address;
     if (_currentPosition != null) {
       try {
-        // Panggil package geocoding
         List<geocoding.Placemark> placemarks = await geocoding
             .placemarkFromCoordinates(
               _currentPosition!.latitude,
@@ -151,10 +127,8 @@ class _QuizViewState extends State<QuizView> {
 
         if (placemarks.isNotEmpty) {
           final placemark = placemarks.first;
-          // Buat format alamat yang rapi (bisa disesuaikan)
           address =
               "${placemark.subLocality}, ${placemark.locality}, ${placemark.subAdministrativeArea}";
-          // Hilangkan "null" atau "Kecamatan " yang tidak perlu jika ada
           address = address
               .replaceAll("null, ", "")
               .replaceAll("Kecamatan ", "");
@@ -166,23 +140,58 @@ class _QuizViewState extends State<QuizView> {
       }
     }
 
+    // Ambil data quiz JSON ketika user selesai
+    String? questionsJson;
+    try {
+      // 1. Ubah List<QuizModel> menjadi List<Map> menggunakan method toJson()
+      List<Map<String, dynamic>> questionsMap = widget.questions
+          .map((q) => q.toJson())
+          .toList();
+      // 2. Encode List<Map> menjadi satu String JSON
+      questionsJson = jsonEncode(questionsMap);
+    } catch (e) {
+      debugPrint("Gagal encode questions ke JSON: $e");
+    }
+
+    String? answersJson;
+    try {
+     final Map<String, String?> stringKeyedAnswers = _userAnswers.map((
+        key,
+        value,
+      ) {
+        return MapEntry(key.toString(), value);
+      });
+      answersJson = jsonEncode(stringKeyedAnswers);
+    } catch (e) {
+      debugPrint("Gagal encode user answers ke JSON: $e");
+    }
+
     try {
       final String? userIdString = await _authController.getLoggedInUserId();
       if (userIdString != null && widget.questions.isNotEmpty) {
         final int userId = int.parse(userIdString);
         final firstQuestion = widget.questions.first;
 
-        await _databaseService.saveQuizResult(
-          userId: userId,
-          category: firstQuestion.category,
-          difficulty: firstQuestion.difficulty,
+       final int newHistoryId = await _databaseService.saveQuizResult(
+          userId: int.parse(userIdString),
+          category: widget.questions.first.category,
+          difficulty: widget.questions.first.difficulty,
           score: score,
           totalQuestions: widget.questions.length,
           latitude: _currentPosition?.latitude,
           longitude: _currentPosition?.longitude,
           address: address,
+          quizDataJson: questionsJson,
+          userAnswersJson: answersJson,
         );
-        debugPrint("Quiz result saved successfully!");
+        debugPrint("Quiz result saved successfully! History ID: $newHistoryId");
+
+      
+        await NotificationService().showQuizResultNotification(
+          newHistoryId,
+          score,
+          widget.questions.length,
+        );
       } else {
         debugPrint(
           "User ID not found or questions empty, couldn't save history.",

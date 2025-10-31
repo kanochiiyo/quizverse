@@ -116,7 +116,7 @@ class _HomeViewState extends State<HomeView> {
     try {
       List<QuizModel> questions = await _controller.loadQuestions(
         amount: selectedAmount,
-        category: selectedCategory!, // '!' aman di sini karena sudah dicek null
+        category: selectedCategory!, 
         difficulty: selectedDifficulty,
       );
 
@@ -144,9 +144,7 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildDropdownContainer<T>({
     required String label,
-    // --- PERBAIKAN DI SINI ---
     required T? value, // Tambahkan '?' untuk mengizinkan nilai null
-    // --- SELESAI PERBAIKAN ---
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?>? onChanged,
     bool disabled = false,

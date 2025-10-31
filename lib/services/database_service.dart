@@ -19,6 +19,8 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'quizverse.db');
+
+    // Tetap di versi 1, tidak perlu onUpgrade
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
@@ -45,24 +47,30 @@ class DatabaseService {
         latitude REAL, 
         longitude REAL,
         address TEXT,
+        quiz_data_json TEXT,
+        user_answers_json TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
   }
 
   //  Quiz History
-  Future<void> saveQuizResult({
+  Future<int> saveQuizResult({
     required int userId,
     required String category,
     required String difficulty,
     required int score,
     required int totalQuestions,
-    double? latitude, 
+    double? latitude,
     double? longitude,
     String? address,
+    String? quizDataJson,
+    String? userAnswersJson,
   }) async {
     final db = await database;
-    await db.insert('quiz_history', {
+
+    // Kita return ID dari data yang baru di-insert
+    return await db.insert('quiz_history', {
       'user_id': userId,
       'category': category,
       'difficulty': difficulty,
@@ -71,7 +79,8 @@ class DatabaseService {
       'latitude': latitude,
       'longitude': longitude,
       'address': address,
-      // quiz_date akan diisi otomatis oleh DEFAULT CURRENT_TIMESTAMP
+      'quiz_data_json': quizDataJson,
+      'user_answers_json': userAnswersJson,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -85,5 +94,18 @@ class DatabaseService {
       orderBy: 'quiz_date DESC',
     );
   }
-  // Quiz History
+
+  Future<Map<String, dynamic>?> getHistoryItemById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'quiz_history',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (maps.isNotEmpty) {
+      return maps.first;
+    }
+    return null;
+  }
 }

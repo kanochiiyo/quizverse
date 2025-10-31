@@ -136,7 +136,7 @@ class AboutPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 15),
                     Text(
-                      "BAGUS B NYA BOORIED",
+                      "tes",
                       textAlign: TextAlign.justify,
                       style: textTheme.bodyMedium?.copyWith(
                         height: 1.5,

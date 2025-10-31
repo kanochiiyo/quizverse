@@ -2,14 +2,39 @@ import 'dart:convert';
 import 'dart:math'; // Diperlukan untuk Random()
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz; // Import timezone
+import 'package:timezone/timezone.dart' as tz; // Import timezon
+import 'package:timezone/data/latest.dart' as tz_data;
 
 class ConversionService {
-  // --- Bagian Mata Uang ---
   final String _currencyApiUrl =
       'https://v6.exchangerate-api.com/v6/54d9aaec75a7f6531106d463/latest/IDR'; // Base IDR
 
+  static bool _timezoneInitialized = false;
+
+  Future<void> _initializeTimezone() async {
+    // Jika sudah diinisialisasi (mungkin oleh main.dart), lewati.
+    if (_timezoneInitialized) return;
+
+    try {
+      // Muat data timezone
+      tz_data.initializeTimeZones();
+      // Set lokasi default (jika main.dart gagal)
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      _timezoneInitialized = true;
+      print("Timezone initialized by ConversionService.");
+    } catch (e) {
+      print("Failed to initialize timezone in ConversionService: $e");
+      // Fallback jika gagal
+      if (!_timezoneInitialized) {
+        // Hanya set fallback jika belum pernah di-set
+        tz.setLocalLocation(tz.UTC);
+        _timezoneInitialized = true; // Tandai tetap true agar tidak diulang
+      }
+    }
+  }
+
   Future<Map<String, dynamic>> _getExchangeRates() async {
+    // ... (Kode Anda di sini sudah benar)
     final url = Uri.parse(_currencyApiUrl);
     try {
       final response = await http.get(url);
@@ -37,8 +62,8 @@ class ConversionService {
     }
   }
 
-  // Fungsi membuat fakta mata uang (IDR base)
   Future<String> getCurrencyFact() async {
+    // ... (Kode Anda di sini sudah benar)
     try {
       final rates = await _getExchangeRates();
       final targetCurrencies = {
@@ -71,8 +96,6 @@ class ConversionService {
     }
   }
 
-  // --- Bagian Waktu ---
-  // Helper untuk mendapatkan nama zona waktu IANA dari singkatan umum
   String _getTimezoneName(String zoneAbbreviation) {
     switch (zoneAbbreviation.toUpperCase()) {
       case 'WIB':
@@ -83,10 +106,11 @@ class ConversionService {
         return 'Asia/Jayapura';
       case 'LONDON':
         return 'Europe/London';
-      // Tambahkan zona lain jika perlu
+      case 'ASIA/TOKYO': // <-- Tambahkan ini
+        return 'Asia/Tokyo';
       default:
         try {
-          // Coba dapatkan lokasi jika nama sudah valid (misal "Asia/Tokyo")
+          // Coba dapatkan lokasi jika nama sudah valid
           tz.getLocation(zoneAbbreviation);
           return zoneAbbreviation;
         } catch (_) {
@@ -99,46 +123,42 @@ class ConversionService {
     }
   }
 
-  // Fungsi membuat fakta waktu (tidak perlu async)
-  String getTimeFact() {
+  Future<String> getTimeFact() async {
     try {
-      // Zona waktu sumber (menggunakan tz.local yang sudah di-set di main.dart)
+      // 1. Pastikan timezone sudah dimuat
+      await _initializeTimezone();
+
+      // 2. Zona waktu sumber (sekarang dijamin aman)
       final sourceLocation = tz.local;
       final nowInSource = tz.TZDateTime.now(sourceLocation);
 
-      // Zona waktu target acak (pilih dari daftar yang diinginkan)
-      final targetZones = [
-        'WITA',
-        'WIT',
-        'London',
-        'Asia/Tokyo',
-      ]; // Tambahkan target lain jika mau
+      // 3. Zona waktu target acak
+      final targetZones = ['WITA', 'WIT', 'London', 'Asia/Tokyo'];
       final randomTargetAbbreviation =
           targetZones[Random().nextInt(targetZones.length)];
-      final targetZoneName = _getTimezoneName(
-        randomTargetAbbreviation,
-      ); // Dapatkan nama IANA
+      final targetZoneName = _getTimezoneName(randomTargetAbbreviation);
+
+      // 4. Dapatkan lokasi (sekarang dijamin aman)
       final targetLocation = tz.getLocation(targetZoneName);
 
-      // Konversi waktu
+      // 5. Konversi waktu
       final timeInTarget = tz.TZDateTime.from(nowInSource, targetLocation);
 
-      // Format waktu (misal: 14:30)
+      // 6. Format waktu
       final sourceTimeString = DateFormat('HH:mm').format(nowInSource);
       final targetTimeString = DateFormat('HH:mm').format(timeInTarget);
 
-      // Dapatkan singkatan zona waktu sumber (misal WIB, WITA)
+      // 7. Dapatkan singkatan zona waktu sumber (misal WIB, WITA, atau UTC jika gagal)
       final sourceAbbreviation = nowInSource.timeZoneName;
 
       return "Tahukah kamu? Pukul $sourceTimeString $sourceAbbreviation saat ini sama dengan pukul $targetTimeString di $randomTargetAbbreviation! 🌍⏰";
     } catch (e) {
       print("Error generating time fact: $e");
-      // Jika terjadi error saat konversi waktu (misal timezone name salah)
+      // Jika terjadi error saat konversi waktu
       return "Gagal memuat fakta waktu.";
     }
   }
 
-  // --- Fungsi Utama untuk Fakta (dengan Randomisasi) ---
   Future<String> getRandomFact() async {
     // Pilih secara acak (50/50 chance) antara fakta mata uang atau waktu
     bool showCurrencyFact = Random().nextBool();
@@ -147,8 +167,8 @@ class ConversionService {
       // Jika terpilih mata uang (perlu await karena async)
       return await getCurrencyFact();
     } else {
-      // Jika terpilih waktu (tidak perlu await karena sync)
-      return getTimeFact();
+      // Jika terpilih waktu (sekarang juga async)
+      return await getTimeFact();
     }
   }
 }

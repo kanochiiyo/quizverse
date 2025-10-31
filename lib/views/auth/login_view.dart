@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:quizverse/bottom_navbar.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/views/auth/register_view.dart';
+import 'package:quizverse/services/notification_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -24,6 +26,37 @@ class _LoginViewState extends State<LoginView> {
   void initState() {
     super.initState();
     _checkLoginStatus();
+    _requestInitialPermissions();
+  }
+
+  Future<void> _requestInitialPermissions() async {
+    // 1. Minta Izin Notifikasi
+    try {
+      await NotificationService().requestPermissions();
+    } catch (e) {
+      debugPrint("Gagal meminta izin notifikasi: $e");
+    }
+
+    // 2. Minta Izin Lokasi (Logika diambil dari quiz_view.dart)
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint("Layanan lokasi mati, tidak meminta izin di awal.");
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        // Ini akan memunculkan popup permintaan izin lokasi
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint("Izin lokasi ditolak permanen oleh pengguna.");
+      }
+    } catch (e) {
+      debugPrint("Gagal meminta izin lokasi di awal: $e");
+    }
   }
 
   void _checkLoginStatus() async {

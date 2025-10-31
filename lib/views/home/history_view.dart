@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:quizverse/controllers/auth_controller.dart'; // To get user ID
 import 'package:quizverse/services/database_service.dart';
+import 'package:quizverse/views/home/history_detail_view.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -104,7 +105,8 @@ class _HistoryPageState extends State<HistoryPage> {
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Tanggal tidak diketahui';
     try {
-      final dateTime = DateTime.parse(dateString);
+      final isoUtcString = dateString.replaceFirst(' ', 'T') + "Z";
+      final dateTime = DateTime.parse(isoUtcString);
       // Format: Hari, Tanggal Bulan Tahun Jam:Menit (e.g., Sen, 30 Okt 2025 10:30)
       return DateFormat('EEE, d MMM yyyy HH:mm', 'id_ID').format(dateTime);
     } catch (e) {
@@ -289,6 +291,26 @@ class _HistoryPageState extends State<HistoryPage> {
                 backgroundColor: theme.primaryColor,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               ),
+              onTap: () {
+                // Cek jika data JSON ada (untuk data lama)
+                if (historyItem['quiz_data_json'] != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          HistoryDetailView(historyItem: historyItem),
+                    ),
+                  );
+                } else {
+                  // Jika data JSON-nya null (untuk riwayat lama)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Detail untuk riwayat ini tidak tersedia.'),
+                      backgroundColor: Colors.grey[700],
+                    ),
+                  );
+                }
+              },
             ),
           ),
         );
