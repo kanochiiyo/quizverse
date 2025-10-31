@@ -90,7 +90,7 @@ class ConversionService {
         decimalDigits: 0,
       ).format(idrValue);
 
-      return "Tahukah kamu? $formattedAmount $randomCurrencyCode saat ini setara dengan sekitar $formattedIdrValue! 💰";
+      return "Tahukah kamu? $formattedAmount $randomCurrencyCode saat ini setara dengan $formattedIdrValue! 💰";
     } catch (e) {
       return "Gagal memuat fakta mata uang: ${e.toString().replaceFirst("Exception: ", "")}";
     }

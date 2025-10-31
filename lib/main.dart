@@ -11,7 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await initializeDateFormatting('id_ID', null);
-  
+
   tz.initializeTimeZones();
   Intl.defaultLocale = 'id_ID';
 
@@ -43,6 +43,7 @@ class MyApp extends StatelessWidget {
       navigatorKey: NavigationService.navigatorKey,
       title: 'QuizVerse',
       theme: ThemeData(
+        fontFamily: 'Inter',
         brightness: Brightness.light,
         primaryColor: primaryColor,
         scaffoldBackgroundColor: backgroundColor,
@@ -60,6 +61,11 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 2,
           centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 20, // Ukuran font default AppBar
+            fontWeight: FontWeight.w600, // Semi-bold
+          ),
         ),
 
         // Tema untuk Tombol

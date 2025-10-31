@@ -116,7 +116,7 @@ class _HomeViewState extends State<HomeView> {
     try {
       List<QuizModel> questions = await _controller.loadQuestions(
         amount: selectedAmount,
-        category: selectedCategory!, 
+        category: selectedCategory!,
         difficulty: selectedDifficulty,
       );
 
@@ -192,8 +192,9 @@ class _HomeViewState extends State<HomeView> {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: disabled ? Colors.grey : Colors.black54,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: disabled ? Colors.grey : Colors.black,
+              fontWeight: FontWeight.w600,
             ),
           ),
           dropdownWidget,
@@ -227,7 +228,7 @@ class _HomeViewState extends State<HomeView> {
                         value: cat.id.toString(),
                         child: Text(
                           cat.name,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontWeight: FontWeight.w300),
                         ),
                       );
                     }).toList(),
@@ -269,7 +270,7 @@ class _HomeViewState extends State<HomeView> {
                   value: diff['id']!,
                   child: Text(
                     diff['name']!,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontWeight: FontWeight.w300),
                   ),
                 );
               }).toList(),
@@ -287,7 +288,7 @@ class _HomeViewState extends State<HomeView> {
                   value: amount,
                   child: Text(
                     '$amount soal',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontWeight: FontWeight.w300),
                   ),
                 );
               }).toList(),

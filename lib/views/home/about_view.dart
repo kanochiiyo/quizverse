@@ -11,16 +11,13 @@ class AboutPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Tentang Aplikasi'),
         automaticallyImplyLeading: false,
-        // AppBar otomatis pakai tema
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0), // Padding konsisten
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Card Informasi Aplikasi ---
             Card(
-              // Otomatis pakai CardTheme
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -60,7 +57,6 @@ class AboutPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // --- Card Informasi Developer (DIUBAH) ---
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -83,35 +79,63 @@ class AboutPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
 
-                    // --- GANTI DENGAN LISTTILE ---
-                    ListTile(
-                      leading: Icon(
-                        Icons.account_circle,
-                        color: colorScheme.secondary,
-                      ),
-                      title: const Text('Nama'),
-                      subtitle: const Text('Andini Andaresta'),
-                      dense: true,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12.0),
+                          child: Image.asset(
+                            'assets/images/foto_profil.JPG',
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 80,
+                                height: 80,
+                                color: Colors.grey[200],
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.grey[400],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Andini Andaresta',
+                                style: textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '124230084',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.numbers,
-                        color: colorScheme.secondary,
-                      ),
-                      title: const Text('NIM'),
-                      subtitle: const Text('124230084'),
-                      dense: true,
-                    ),
-                    // --- AKHIR PERUBAHAN ---
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
 
-            // --- Card Kesan & Pesan ---
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -123,7 +147,7 @@ class AboutPage extends StatelessWidget {
                         Icon(
                           Icons.rate_review_outlined,
                           size: 28,
-                          color: Colors.teal, // Tetap teal, cocok
+                          color: Colors.teal,
                         ),
                         const SizedBox(width: 10),
                         Text(
@@ -136,7 +160,7 @@ class AboutPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 15),
                     Text(
-                      "tes",
+                      "Isi dengan kesan dan pesanmu selama mengerjakan project ini...",
                       textAlign: TextAlign.justify,
                       style: textTheme.bodyMedium?.copyWith(
                         height: 1.5,
