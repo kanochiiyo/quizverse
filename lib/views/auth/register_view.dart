@@ -102,7 +102,7 @@ class _RegisterViewState extends State<RegisterView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Buat akun QuizVerse Anda',
+                'Buat akun Quizverse Anda',
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),

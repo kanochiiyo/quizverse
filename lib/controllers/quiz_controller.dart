@@ -6,12 +6,14 @@ class QuizController {
   final QuizService _service = QuizService();
 
   Future<List<CategoryModel>> loadCategories() async {
-    return await _service.fetchCategories();
+    final categories = await _service.fetchCategories();
+    categories.sort((a, b) => a.name.compareTo(b.name));
+    return categories;
   }
 
   Future<List<QuizModel>> loadQuestions({
     required int amount,
-    required String category, 
+    required String category,
     required String difficulty,
   }) async {
     // Get quiz data from API service
@@ -21,6 +23,4 @@ class QuizController {
       difficulty: difficulty,
     );
   }
-
-  
 }

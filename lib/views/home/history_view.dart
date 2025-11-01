@@ -275,8 +275,21 @@ class _HistoryViewState extends State<HistoryView> {
                       Icons.location_on_outlined,
                       '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
                     ),
+                  if (historyItem['quiz_data_json'] != null)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6.0), // Beri sedikit jarak
+                      child: Text(
+                        'Klik untuk lihat detail...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                 ],
               ),
+
               trailing: Chip(
                 label: Text(
                   '${score ?? '?'} / ${totalQuestions ?? '?'}',
