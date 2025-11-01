@@ -1,5 +1,5 @@
-# 🪐 Quizverse
-
+# 🪐 Quizverse 
+## (Andini Andaresta/124230084)
 Selamat datang di Quizverse! Sebuah aplikasi kuis dinamis yang dibangun menggunakan Flutter. Uji pengetahuanmu di berbagai kategori, lacak statistik, dan kumpulkan semua *achievement*!
 
 Aplikasi ini mengambil soal secara langsung dari Open Trivia Database API dan menyimpannya secara lokal di perangkatmu menggunakan SQLite.
