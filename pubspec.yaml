@@ -51,6 +51,7 @@ dependencies:
   permission_handler: ^12.0.1
   get: ^4.7.2
   font_awesome_flutter: ^10.12.0
+  flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
   flutter_test:
@@ -86,14 +87,6 @@ flutter:
         - asset: assets/fonts/Inter_18pt-Bold.ttf
           weight: 700
 
-    - family: Montserrat
-      fonts:
-        - asset: assets/fonts/Montserrat-Regular.ttf
-        - asset: assets/fonts/Montserrat-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/Montserrat-ExtraBold.ttf
-          weight: 800
-
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
@@ -119,3 +112,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  adaptive_icon_background: "#00695C"
+  adaptive_icon_foreground: "assets/icons/app_icon.png"
