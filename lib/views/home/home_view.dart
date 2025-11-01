@@ -1,4 +1,3 @@
-// lib/views/home/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:quizverse/controllers/quiz_controller.dart';
 import 'package:quizverse/models/quiz_model.dart';
@@ -14,18 +13,21 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
+  // Inisialisasi controller dan service
   final QuizController _controller = QuizController();
   final ConversionService _conversionService = ConversionService();
 
-  // Ini sudah benar (nullable)
+  // State untuk data dari API/Service
   String? selectedCategory;
   bool isLoadingCategories = true;
   String? categoryError;
   List<CategoryModel> categories = [];
 
+  // State pilihan user
   String selectedDifficulty = 'easy';
   int selectedAmount = 10;
 
+  // State untuk UI
   bool isLoading = false;
   String? dailyFact;
   bool isLoadingFact = true;
@@ -42,7 +44,6 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-
     _loadDailyFact();
     _loadCategories();
   }
@@ -58,11 +59,8 @@ class _HomeViewState extends State<HomeView> {
       final fetchedCategories = await _controller.loadCategories();
       if (!mounted) return;
       setState(() {
+        // Ambil data dari API controller
         categories = fetchedCategories;
-
-        if (categories.isNotEmpty) {
-          selectedCategory = categories.first.id.toString();
-        }
         isLoadingCategories = false;
       });
     } catch (e) {
@@ -100,8 +98,9 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
+  // Pahami dari sini
   Future<void> startQuiz() async {
-    // Pengecekan ini sudah benar
+    // Kalo misal belum milih kategori apa-apa
     if (selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -114,6 +113,7 @@ class _HomeViewState extends State<HomeView> {
 
     setState(() => isLoading = true);
     try {
+      // Load soal dari controller quiz
       List<QuizModel> questions = await _controller.loadQuestions(
         amount: selectedAmount,
         category: selectedCategory!,
@@ -142,67 +142,6 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
-  Widget _buildDropdownContainer<T>({
-    required String label,
-    required T? value, // Tambahkan '?' untuk mengizinkan nilai null
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?>? onChanged,
-    bool disabled = false,
-  }) {
-    Widget dropdownWidget;
-
-    if (items.isEmpty) {
-      String text = "Memuat...";
-      if (categoryError != null) text = "Gagal memuat";
-      if (disabled) text = "-";
-
-      dropdownWidget = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14.0),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-    } else {
-      dropdownWidget = DropdownButton<T>(
-        value: value,
-        isExpanded: true,
-        items: items,
-        onChanged: disabled ? null : onChanged,
-        underline: const SizedBox(),
-        icon: Icon(
-          Icons.arrow_drop_down,
-          color: disabled ? Colors.grey : Theme.of(context).primaryColor,
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: disabled ? Colors.grey.shade100 : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: disabled ? Colors.grey : Colors.black,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          dropdownWidget,
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isOverallLoading =
@@ -218,90 +157,128 @@ class _HomeViewState extends State<HomeView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildDropdownContainer<String>(
-              label: 'Pilih Kategori',
-              value: selectedCategory, // value sekarang (String?)
-              items: categoryError != null
-                  ? []
-                  : categories.map((cat) {
-                      return DropdownMenuItem(
-                        value: cat.id.toString(),
-                        child: Text(
-                          cat.name,
-                          style: const TextStyle(fontWeight: FontWeight.w300),
-                        ),
-                      );
-                    }).toList(),
-              onChanged: (val) {
-                setState(() => selectedCategory = val!);
-              },
-              disabled: isOverallLoading,
-            ),
-            if (categoryError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0, left: 12.0),
-                child: Row(
-                  children: [
-                    Text(
-                      categoryError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.refresh,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                      onPressed: _loadCategories,
-                      splashRadius: 16,
-                    ),
-                  ],
+            // Panggil widget untuk build section title dan widget category card
+            _buildSectionTitle('Pilih Kategori'),
+            _buildCategoryList(isOverallLoading),
+            if (categoryError != null) _buildCategoryError(),
+
+            const SizedBox(height: 24),
+            _buildSectionTitle('Tingkat Kesulitan'),
+            // Panggil widget dofficulty card
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: difficulties[0]['name']!,
+                    icon: _getDifficultyIcon(difficulties[0]['id']!),
+                    isSelected: selectedDifficulty == difficulties[0]['id'],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedDifficulty = difficulties[0]['id']!;
+                            });
+                          },
+                  ),
                 ),
-              ),
-            const SizedBox(height: 16),
-            _buildDropdownContainer<String>(
-              label: 'Pilih Kesulitan',
-              value: selectedDifficulty, // value (String)
-              items: difficulties.map((diff) {
-                return DropdownMenuItem(
-                  value: diff['id']!,
-                  child: Text(
-                    diff['name']!,
-                    style: const TextStyle(fontWeight: FontWeight.w300),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: difficulties[1]['name']!,
+                    icon: _getDifficultyIcon(difficulties[1]['id']!),
+                    isSelected: selectedDifficulty == difficulties[1]['id'],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedDifficulty = difficulties[1]['id']!;
+                            });
+                          },
                   ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() => selectedDifficulty = val!);
-              },
-              disabled: isOverallLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildDropdownContainer<int>(
-              label: 'Pilih Jumlah Soal',
-              value: selectedAmount, // value (int)
-              items: amountOptions.map((amount) {
-                return DropdownMenuItem(
-                  value: amount,
-                  child: Text(
-                    '$amount soal',
-                    style: const TextStyle(fontWeight: FontWeight.w300),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: difficulties[2]['name']!,
+                    icon: _getDifficultyIcon(difficulties[2]['id']!),
+                    isSelected: selectedDifficulty == difficulties[2]['id'],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedDifficulty = difficulties[2]['id']!;
+                            });
+                          },
                   ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() => selectedAmount = val!);
-              },
-              disabled: isOverallLoading,
+                ),
+              ],
             ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Jumlah Soal'),
+            // Panggil widget selection jumlah soal card
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: '${amountOptions[0]} Soal',
+                    icon: Icons.format_list_numbered,
+                    isSelected: selectedAmount == amountOptions[0],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedAmount = amountOptions[0];
+                            });
+                          },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: '${amountOptions[1]} Soal',
+                    icon: Icons.format_list_numbered,
+                    isSelected: selectedAmount == amountOptions[1],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedAmount = amountOptions[1];
+                            });
+                          },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectionCard(
+                    text: '${amountOptions[2]} Soal',
+                    icon: Icons.format_list_numbered,
+                    isSelected: selectedAmount == amountOptions[2],
+                    onTap: isOverallLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedAmount = amountOptions[2];
+                            });
+                          },
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 24),
             _buildDailyFactWidget(),
             const SizedBox(height: 24),
+
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.end,
+            //   children: [
+            // Tombol mulai kuis
             ElevatedButton(
-              onPressed: isOverallLoading ? null : startQuiz,
+              // Kalo belum milih kategori atau lagi loading, null in dulu (biar ga bisa diteken)
+              onPressed: (isOverallLoading || selectedCategory == null)
+                  ? null
+                  : startQuiz,
               child: isLoading
                   ? const SizedBox(
                       height: 20,
@@ -315,8 +292,210 @@ class _HomeViewState extends State<HomeView> {
             ),
           ],
         ),
+        // ],
+        // ),
       ),
     );
+  }
+
+  // Helper untuk bikin selection title
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  // Helper untuk bikin category card
+  Widget _buildCategoryList(bool isLoading) {
+    if (isLoadingCategories) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (categories.isEmpty && categoryError == null) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        child: Text("Tidak ada kategori ditemukan."),
+      );
+    }
+
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final bool isSelected = selectedCategory == category.id.toString();
+
+          return _buildCategoryCard(
+            category: category,
+            isSelected: isSelected,
+            onTap: isLoading
+                ? null
+                : () {
+                    setState(() {
+                      selectedCategory = category.id.toString();
+                    });
+                  },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryError() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0, left: 12.0),
+      child: Row(
+        children: [
+          Text(
+            categoryError!,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontSize: 12,
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, size: 16, color: Colors.grey[600]),
+            onPressed: _loadCategories,
+            splashRadius: 16,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Category Card
+  Widget _buildCategoryCard({
+    required CategoryModel category,
+    required bool isSelected,
+    required VoidCallback? onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 110,
+        margin: EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          // Ngatur kalo selected, kalo dipilih, ubah BG card,
+          color: isSelected ? colorScheme.primary : theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            // Untuk border, kalo ga dipilih, ganti warna border
+            color: isSelected ? colorScheme.primary : Colors.grey[300]!,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(12),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              category.iconData,
+              size: 30,
+              // Kalo dipilih, iconnya ubah jadi warna putih
+              color: isSelected ? Colors.white : colorScheme.primary,
+            ),
+            SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Text(
+                category.name,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget builder card untuk tingkat kesulitan dan jumlah soal (kategori dibedain karena dari API/model)
+  Widget _buildSelectionCard({
+    required String text,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback? onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? colorScheme.primary : theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : Colors.grey[300]!,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? Colors.white
+                  : colorScheme.onSurface.withAlpha(178),
+              size: 30,
+            ),
+            SizedBox(height: 8),
+            Text(
+              text,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Ambil data Icon
+  IconData _getDifficultyIcon(String difficulty) {
+    switch (difficulty) {
+      case 'easy':
+        return Icons.grass;
+      case 'medium':
+        return Icons.local_fire_department_outlined;
+      case 'hard':
+        return Icons.bolt;
+      default:
+        return Icons.help_outline;
+    }
   }
 
   Widget _buildDailyFactWidget() {
@@ -401,6 +580,12 @@ class _HomeViewState extends State<HomeView> {
       content = const SizedBox.shrink();
     }
 
-    return Card(color: Colors.white, child: content);
+    return Card(
+      color: Colors.white,
+      elevation: 1,
+      shadowColor: Colors.black.withAlpha(26),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: content,
+    );
   }
 }

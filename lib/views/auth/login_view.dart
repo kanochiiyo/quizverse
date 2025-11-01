@@ -1,4 +1,3 @@
-// lib/views/auth/login_view.dart
 import 'package:flutter/material.dart';
 import 'package:quizverse/bottom_navbar.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
@@ -30,14 +29,12 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _requestInitialPermissions() async {
-    // 1. Minta Izin Notifikasi
     try {
       await NotificationService().requestPermissions();
     } catch (e) {
       debugPrint("Gagal meminta izin notifikasi: $e");
     }
 
-    // 2. Minta Izin Lokasi (Logika diambil dari quiz_view.dart)
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -47,7 +44,6 @@ class _LoginViewState extends State<LoginView> {
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        // Ini akan memunculkan popup permintaan izin lokasi
         permission = await Geolocator.requestPermission();
       }
 
@@ -69,7 +65,7 @@ class _LoginViewState extends State<LoginView> {
         if (loggedIn) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const BottomNavBar()),
+            MaterialPageRoute(builder: (context) => BottomNavBar()),
           );
         } else {
           setState(() {
@@ -78,7 +74,7 @@ class _LoginViewState extends State<LoginView> {
         }
       }
     } catch (e) {
-      print("Error checking login status: $e");
+      debugPrint("Error checking login status: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -111,7 +107,7 @@ class _LoginViewState extends State<LoginView> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const BottomNavBar()),
+        MaterialPageRoute(builder: (context) => BottomNavBar()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -136,11 +132,9 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil warna dari Tema, BUKAN define lokal
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Tampilan loading awal yang lebih bersih
     if (_isLoading &&
         _usernameController.text.isEmpty &&
         _errorMessage == null) {
@@ -158,24 +152,19 @@ class _LoginViewState extends State<LoginView> {
       );
     }
 
-    // Tampilan Form Login
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24), // Beri padding lebih
+          padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            // mainAxisAlignment: MainAxisAlignment.center,
+            // Biar menuhin width parent
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Tambahkan Ikon
-              Icon(
-                Icons.quiz, // Ikon kuis
-                size: 80,
-                color: colorScheme.primary,
-              ),
+              Icon(Icons.quiz, size: 80, color: colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                'QuizVerse Login', // Ganti nama agar konsisten
+                'Login',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.primary,
@@ -183,18 +172,18 @@ class _LoginViewState extends State<LoginView> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // --- Username ---
+
               TextField(
                 controller: _usernameController,
                 decoration: const InputDecoration(
                   labelText: "Username",
                   prefixIcon: Icon(Icons.person),
                 ),
-                // Style dan border diambil dari tema global
+
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
-              // --- Password ---
+
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -217,22 +206,18 @@ class _LoginViewState extends State<LoginView> {
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 24),
-              // --- Error Message ---
+
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: TextStyle(
-                      color: colorScheme.error, // Gunakan warna error dari tema
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: colorScheme.error, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ),
-              // --- Tombol Login ---
+
               ElevatedButton(
-                // Style diambil dari tema global
                 onPressed: _isLoading ? null : _login,
                 child: _isLoading
                     ? const SizedBox(
@@ -246,7 +231,7 @@ class _LoginViewState extends State<LoginView> {
                     : const Text("Login"),
               ),
               const SizedBox(height: 16),
-              // --- Tombol ke Register ---
+
               TextButton(
                 onPressed: _isLoading ? null : _goToRegister,
                 child: Text(

@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
-import 'package:quizverse/controllers/auth_controller.dart'; // To get user ID
+import 'package:intl/intl.dart';
+import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/services/database_service.dart';
 import 'package:quizverse/views/home/history_detail_view.dart';
 
-class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+class HistoryView extends StatefulWidget {
+  const HistoryView({super.key});
 
   @override
-  State<HistoryPage> createState() => _HistoryPageState();
+  State<HistoryView> createState() => _HistoryViewState();
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class _HistoryViewState extends State<HistoryView> {
   final DatabaseService _dbHelper = DatabaseService();
   final AuthController _authController = AuthController();
 
-  // Controller untuk search bar
   final TextEditingController _searchController = TextEditingController();
-  // List untuk menyimpan semua riwayat asli dari DB
+
   List<Map<String, dynamic>> _quizHistory = [];
-  // List untuk menyimpan hasil filter yang akan ditampilkan
+
   List<Map<String, dynamic>> _filteredHistory = [];
 
   bool _isLoading = true;
@@ -30,14 +29,11 @@ class _HistoryPageState extends State<HistoryPage> {
     super.initState();
     _loadHistory();
 
-    // Tambahkan listener ke search controller.
-    // Setiap kali teks berubah, panggil _filterHistory.
     _searchController.addListener(() {
       _filterHistory(_searchController.text);
     });
   }
 
-  // dispose controller saat widget tidak lagi digunakan
   @override
   void dispose() {
     _searchController.dispose();
@@ -45,7 +41,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _loadHistory() async {
-    if (!mounted) return; // Check if the widget is still in the tree
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -59,12 +55,11 @@ class _HistoryPageState extends State<HistoryPage> {
         final history = await _dbHelper.getQuizHistory(userId);
         if (!mounted) return;
         setState(() {
-          _quizHistory = history; // Simpan data asli
-          _filteredHistory = history; // Awalnya, tampilkan semua data
+          _quizHistory = history;
+          _filteredHistory = history;
           _isLoading = false;
         });
       } else {
-        // Case where user ID is not found
         if (!mounted) return;
         setState(() {
           _errorMessage = "Tidak dapat memuat riwayat: User tidak ditemukan.";
@@ -81,7 +76,6 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  // Fungsi untuk memfilter riwayat berdasarkan query pencarian
   void _filterHistory(String query) {
     final lowerCaseQuery = query.toLowerCase();
 
@@ -95,30 +89,26 @@ class _HistoryPageState extends State<HistoryPage> {
           address.contains(lowerCaseQuery);
     }).toList();
 
-    // Update state list yang akan ditampilkan
     setState(() {
       _filteredHistory = filteredList;
     });
   }
 
-  // Helper function to format the date string (FIXED)
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Tanggal tidak diketahui';
     try {
-      // 1. "2025-10-31 10:00:00" -> "2025-10-31T10:00:00Z"
       final isoUtcString = dateString.replaceFirst(' ', 'T') + "Z";
-      // 2. Parse ke UTC
+
       final utcDateTime = DateTime.parse(isoUtcString);
-      // 3. Konversi ke Lokal (WIB)
+
       final localDateTime = utcDateTime.toLocal();
-      // 4. Format
+
       return DateFormat('EEE, d MMM yyyy HH:mm', 'id_ID').format(localDateTime);
     } catch (e) {
-      return dateString; // Return original string if parsing fails
+      return dateString;
     }
   }
 
-  // Helper function untuk format durasi
   String _formatDuration(int? totalSeconds) {
     if (totalSeconds == null || totalSeconds < 0) {
       return '?';
@@ -135,12 +125,9 @@ class _HistoryPageState extends State<HistoryPage> {
     return durationString;
   }
 
-  // Helper function to capitalize the first letter
   String capitalize(String s) => s[0].toUpperCase() + s.substring(1);
 
-  // Helper widget untuk konsistensi UI
   Widget _buildInfoRow(IconData icon, String text) {
-    // Helper ini untuk menyeragamkan tampilan baris info
     return Padding(
       padding: const EdgeInsets.only(top: 4.0),
       child: Row(
@@ -164,11 +151,10 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Riwayat Kuis'),
-        automaticallyImplyLeading: false, // Remove back button
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
@@ -176,13 +162,12 @@ class _HistoryPageState extends State<HistoryPage> {
               decoration: InputDecoration(
                 hintText: 'Cari kategori, kesulitan, atau lokasi...',
                 prefixIcon: const Icon(Icons.search),
-                // Tambahkan tombol clear (X)
+
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          // _filterHistory('') akan otomatis terpanggil oleh listener
                         },
                       )
                     : null,
@@ -194,9 +179,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
 
-          Expanded(
-            child: _buildBody(), // Panggil helper function
-          ),
+          Expanded(child: _buildBody()),
         ],
       ),
     );
@@ -244,7 +227,6 @@ class _HistoryPageState extends State<HistoryPage> {
         final longitude = historyItem['longitude'] as double?;
         final address = historyItem['address'] as String?;
 
-        // PENTING: Membaca 'duration' (sesuai DB), bukan 'duration_seconds'
         final durationInSeconds = historyItem['duration'] as int?;
         final theme = Theme.of(context);
 
@@ -259,7 +241,7 @@ class _HistoryPageState extends State<HistoryPage> {
               leading: Icon(
                 Icons.history_edu,
                 color: theme.primaryColor,
-                size: 36, // Sedikit lebih besar
+                size: 36,
               ),
               title: Text(
                 category ?? 'Kategori Tidak Diketahui',
@@ -269,7 +251,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  // Menggunakan helper widget _buildInfoRow
+
                   _buildInfoRow(
                     Icons.layers_outlined,
                     'Kesulitan: ${difficulty != null ? capitalize(difficulty) : '?'}',
@@ -288,7 +270,6 @@ class _HistoryPageState extends State<HistoryPage> {
 
                   if (address != null && address.isNotEmpty)
                     _buildInfoRow(Icons.location_on_outlined, address)
-                  // Fallback jika alamat null tapi ada Lat/Long
                   else if (latitude != null && longitude != null)
                     _buildInfoRow(
                       Icons.location_on_outlined,
@@ -309,7 +290,6 @@ class _HistoryPageState extends State<HistoryPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               ),
               onTap: () {
-                // Cek jika data JSON ada (untuk data lama)
                 if (historyItem['quiz_data_json'] != null) {
                   Navigator.push(
                     context,
@@ -319,7 +299,6 @@ class _HistoryPageState extends State<HistoryPage> {
                     ),
                   );
                 } else {
-                  // Jika data JSON-nya null (untuk riwayat lama)
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Detail untuk riwayat ini tidak tersedia.'),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:quizverse/models/quiz_model.dart';
 
 class HistoryDetailView extends StatefulWidget {
-  // Halaman ini menerima satu baris data dari tabel quiz_history
   final Map<String, dynamic> historyItem;
 
   const HistoryDetailView({super.key, required this.historyItem});
@@ -14,7 +13,7 @@ class HistoryDetailView extends StatefulWidget {
 
 class _HistoryDetailViewState extends State<HistoryDetailView> {
   List<QuizModel> _questions = [];
-  Map<String, String?> _userAnswers = {}; // Kunci adalah String ("0", "1", dst)
+  Map<String, String?> _userAnswers = {};
   bool _isLoading = true;
 
   @override
@@ -24,11 +23,9 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
   }
 
   void _parseHistoryData() {
-    // Siapkan data sementara
     List<QuizModel> tempQuestions = [];
     Map<String, String?> tempAnswers = {};
 
-    // 1. Ambil dan decode JSON pertanyaan
     final String? questionsJson = widget.historyItem['quiz_data_json'];
     if (questionsJson != null) {
       try {
@@ -41,7 +38,6 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
       }
     }
 
-    // 2. Ambil dan decode JSON jawaban pengguna
     final String? answersJson = widget.historyItem['user_answers_json'];
     if (answersJson != null) {
       try {
@@ -54,23 +50,21 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
       }
     }
 
-    // 3. Panggil setState SATU KALI setelah semua data siap
     setState(() {
       _questions = tempQuestions;
       _userAnswers = tempAnswers;
-      _isLoading = false; // Matikan loading
+      _isLoading = false;
     });
   }
 
-  // Widget helper untuk menampilkan tile jawaban
   Widget _buildAnswerTile(String answer, Color color, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(26),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withAlpha(128)),
       ),
       child: Row(
         children: [
@@ -86,7 +80,6 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Ambil info utama dari riwayat
     final category = widget.historyItem['category'] ?? 'Detail Riwayat';
     final total = widget.historyItem['total_questions'];
 
@@ -99,8 +92,7 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
               itemCount: _questions.length,
               itemBuilder: (context, index) {
                 final question = _questions[index];
-                // Ambil jawaban pengguna dari map.
-                // Ingat, kuncinya sekarang adalah String ("0", "1", "2", ...)
+
                 final userAnswer = _userAnswers[index.toString()];
                 final isCorrect = userAnswer == question.correctAnswer;
 
@@ -128,7 +120,6 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Tampilkan jawaban pengguna
                         Text(
                           "Jawaban Anda:",
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -154,7 +145,6 @@ class _HistoryDetailViewState extends State<HistoryDetailView> {
                             Icons.cancel_outlined,
                           ),
 
-                        // Tampilkan jawaban yang benar (jika jawaban pengguna salah DAN tidak kosong)
                         if (!isCorrect) ...[
                           const SizedBox(height: 12),
                           Text(

@@ -3,14 +3,14 @@ import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/views/auth/login_view.dart';
 import 'package:quizverse/services/database_service.dart';
 
-class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+class ProfileView extends StatefulWidget {
+  const ProfileView({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<ProfileView> createState() => _ProfileViewState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfileViewState extends State<ProfileView> {
   final AuthController _authController = AuthController();
   final DatabaseService _databaseService = DatabaseService();
   String? _username;
@@ -54,8 +54,9 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
+      // Hitung berdasarkan ada berapa data history quiz
       final totalQuizzes = history.length;
-
+      // Hitung berdasarkan durasi di tiap data history quiz
       final totalDurationSeconds = history.fold<int>(
         0,
         (sum, item) => sum + (item['duration'] as int? ?? 0),
@@ -75,9 +76,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
       for (var item in history) {
         totalScore += (item['score'] as int? ?? 0);
+        // Hitung berapa skor yang didapat dari tiap data
+        // Hitung berapa soal yang dikerjakan dari tiap data
         totalQuestions += (item['total_questions'] as int? ?? 0);
       }
 
+      // Hitung rata-ratanya dan jadikan persen
       final avgScore = (totalQuestions > 0)
           ? (totalScore / totalQuestions) * 100
           : 0.0;
@@ -143,11 +147,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final theme = Theme.of(context);
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(26),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: color.withOpacity(0.3)),
+          side: BorderSide(color: color.withAlpha(77)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -240,7 +244,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
           CircleAvatar(
             radius: 60,
-            backgroundColor: theme.primaryColor.withOpacity(0.1),
+            backgroundColor: theme.primaryColor.withAlpha(26),
             child: Icon(Icons.person, size: 70, color: theme.primaryColor),
           ),
           const SizedBox(height: 16),
@@ -258,7 +262,6 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _logout,
-            icon: const Icon(Icons.logout),
             label: const Text('Logout'),
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.error,

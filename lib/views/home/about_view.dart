@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
+class AboutView extends StatelessWidget {
+  const AboutView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +160,7 @@ class AboutPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 15),
                     Text(
-                      "Isi dengan kesan dan pesanmu selama mengerjakan project ini...",
+                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc efficitur pellentesque nisl.",
                       textAlign: TextAlign.justify,
                       style: textTheme.bodyMedium?.copyWith(
                         height: 1.5,

@@ -17,28 +17,16 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestBadgePermission: false,
-          requestSoundPermission: false,
-        );
-
     const InitializationSettings initializationSettings =
-        InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsIOS,
-        );
+        InitializationSettings(android: initializationSettingsAndroid);
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      // Properti untuk onClick
       onDidReceiveNotificationResponse: onNotificationTap,
     );
   }
 
-  // Callback handler saat notifikasi di-klik
-  @pragma('vm:entry-point') // Wajib untuk callback background
+  @pragma('vm:entry-point')
   static void onNotificationTap(
     NotificationResponse notificationResponse,
   ) async {
@@ -46,22 +34,16 @@ class NotificationService {
 
     if (payload == null) return;
 
-    // Cek jika ini adalah notifikasi hasil kuis
     if (payload.startsWith('history_id_')) {
       try {
-        // 1. Ambil ID dari payload
         final int historyId = int.parse(payload.split('_').last);
 
-        // 2. Ambil data lengkap dari database
-        // Kita perlu inisialisasi DB Service lagi karena ini
-        // mungkin berjalan di background (isolate)
         final dbService = DatabaseService();
-        await dbService.database; // Pastikan database terbuka
+        await dbService.database;
 
         final historyItem = await dbService.getHistoryItemById(historyId);
 
         if (historyItem != null) {
-          // 3. Navigasi ke Halaman Detail
           NavigationService.navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => HistoryDetailView(historyItem: historyItem),
@@ -70,14 +52,10 @@ class NotificationService {
         }
       } catch (e) {
         debugPrint("Error handling notification tap: $e");
-        // Fallback: buka halaman utama jika gagal
-        // NavigationService.navigatorKey.currentState?.push(...);
       }
     }
-    // ... (else if untuk reminder, jika ada) ...
   }
 
-  // Notification permission (Android 13+)
   Future<void> requestPermissions() async {
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -92,7 +70,6 @@ class NotificationService {
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  // Fungsi spesifik untuk notifikasi hasil kuis
   Future<void> showQuizResultNotification(
     int historyId,
     int score,
@@ -100,8 +77,8 @@ class NotificationService {
   ) async {
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
-          'quiz_result_channel', // ID Channel
-          'Hasil Kuis', // Nama Channel
+          'quiz_result_channel',
+          'Hasil Kuis',
           channelDescription: 'Notifikasi yang muncul setelah kuis selesai.',
           importance: Importance.max,
           priority: Priority.high,
@@ -114,11 +91,11 @@ class NotificationService {
     );
 
     await flutterLocalNotificationsPlugin.show(
-      historyId, // ID Notifikasi (statis untuk hasil kuis)
+      historyId,
       "Kuis Selesai!",
       "Skor Anda: $score dari $totalQuestions. Klik untuk melihat riwayat.",
       notificationDetails,
-      // Payload ini yang akan diterima 'onNotificationTap'
+
       payload: 'history_id_$historyId',
     );
   }

@@ -20,11 +20,9 @@ class DatabaseService {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'quizverse.db');
 
-    // Tetap di versi 1, tidak perlu onUpgrade
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
-  // Buat tabel users saat database pertama kali dibuat
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE users(
@@ -55,7 +53,6 @@ class DatabaseService {
     ''');
   }
 
-  //  Quiz History
   Future<int> saveQuizResult({
     required int userId,
     required String category,
@@ -71,7 +68,6 @@ class DatabaseService {
   }) async {
     final db = await database;
 
-    // Kita return ID dari data yang baru di-insert
     return await db.insert('quiz_history', {
       'user_id': userId,
       'category': category,
@@ -89,7 +85,7 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> getQuizHistory(int userId) async {
     final db = await database;
-    // Ambil data diurutkan dari yang terbaru
+
     return await db.query(
       'quiz_history',
       where: 'user_id = ?',

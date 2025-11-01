@@ -1,48 +1,66 @@
 import 'package:flutter/material.dart';
-import 'package:quizverse/views/home/home_view.dart';
-import 'package:quizverse/views/home/history_view.dart';
-import 'package:quizverse/views/home/profile_view.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:get/get.dart';
 import 'package:quizverse/views/home/about_view.dart';
+import 'package:quizverse/views/home/history_view.dart';
+import 'package:quizverse/views/home/home_view.dart';
+import 'package:quizverse/views/home/profile_view.dart';
 
-class BottomNavBar extends StatefulWidget {
-  const BottomNavBar({super.key});
+class BottomNavBar extends StatelessWidget {
+  final RxInt selectedIndex = 0.obs;
 
-  @override
-  State<BottomNavBar> createState() => _BottomNavBarState();
-}
-
-class _BottomNavBarState extends State<BottomNavBar> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
+  final List<Widget> pages = [
     HomeView(),
-    HistoryPage(),
-    ProfilePage(),
-    AboutPage(),
+    HistoryView(),
+    ProfileView(),
+    AboutView(),
   ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
     return Scaffold(
-      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Riwayat'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.info_outline),
-            label: 'Tentang',
+      body: Obx(() => pages[selectedIndex.value]),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          boxShadow: [
+            BoxShadow(blurRadius: 20, color: Colors.black.withAlpha(26)),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
+            child: GNav(
+              rippleColor: colorScheme.primary.withAlpha(39),
+              hoverColor: colorScheme.primary.withAlpha(26),
+              gap: 8,
+
+              activeColor: colorScheme.primary,
+
+              iconSize: 24,
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              duration: Duration(milliseconds: 400),
+
+              tabBackgroundColor: colorScheme.primary.withAlpha(26),
+
+              color: colorScheme.onSurface.withAlpha(153),
+
+              tabs: [
+                GButton(icon: Icons.home, text: 'Home'),
+                GButton(icon: Icons.history, text: 'History'),
+                GButton(icon: Icons.person, text: 'Profile'),
+                GButton(icon: Icons.info, text: 'About'),
+              ],
+              selectedIndex: selectedIndex.value,
+              onTabChange: (index) {
+                selectedIndex.value = index;
+              },
+            ),
           ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        ),
       ),
     );
   }

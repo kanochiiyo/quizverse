@@ -8,22 +8,23 @@ import 'package:quizverse/services/notification_service.dart';
 import 'package:quizverse/services/navigation_service.dart';
 
 void main() async {
+  // Bikin binding antara FLutter sama engine (diperlukan kita ada manggil fungsi sebelum runApp())
   WidgetsFlutterBinding.ensureInitialized();
 
   await initializeDateFormatting('id_ID', null);
 
+  // Inisialisasi data timezone diperlukan untuk nanti di conversion_service.dart
   tz.initializeTimeZones();
   Intl.defaultLocale = 'id_ID';
-
   try {
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
-    print("Default location set to: ${tz.local.name}");
+    debugPrint("Default location set to: ${tz.local.name}");
   } catch (e) {
-    print("Error setting default location: $e. Using default UTC.");
+    debugPrint("Error setting default location: $e. Using default UTC.");
     tz.setLocalLocation(tz.UTC);
   }
 
-  // Inisialisasi Notifikasi (Anda sudah punya ini)
+  // Setup awal notifikasi (pake await karena ini butuh waktu jadi biar aplikasinya gak freeze pas nunggu)
   await NotificationService().initNotifications();
 
   runApp(const MyApp());
@@ -34,25 +35,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Inisialisasi warna biar ga beda-beda ntar
     const Color primaryColor = Color(0xFF00695C);
     const Color lightPrimaryColor = Color(0xFF00897B);
     const Color accentColor = Color(0xFF4DB6AC);
     const Color backgroundColor = Color(0xFFF5F5F5);
 
     return MaterialApp(
+      // Remote untuk navigasi, karena biasanya kalo navigasi butuh context, tapi ada kalanya kita harus berpindah tapi ga punya context misalnya saat nge-tap notifikasi jadisi navigatorKey ini tinggal nyuruh pindah dari state saat ini
       navigatorKey: NavigationService.navigatorKey,
       title: 'QuizVerse',
+
+      // Bikin root theme biar default
       theme: ThemeData(
         fontFamily: 'Inter',
         brightness: Brightness.light,
         primaryColor: primaryColor,
         scaffoldBackgroundColor: backgroundColor,
-
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryColor,
           primary: primaryColor,
           secondary: accentColor,
-          background: backgroundColor,
+          surface: backgroundColor,
           error: Colors.redAccent,
         ),
 
@@ -63,12 +67,11 @@ class MyApp extends StatelessWidget {
           centerTitle: true,
           titleTextStyle: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 20, // Ukuran font default AppBar
-            fontWeight: FontWeight.w600, // Semi-bold
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
         ),
 
-        // Tema untuk Tombol
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
@@ -84,7 +87,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // Tema untuk Input Field (Login/Register)
         inputDecorationTheme: InputDecorationTheme(
           labelStyle: const TextStyle(color: Colors.black54),
           prefixIconColor: lightPrimaryColor,
@@ -102,7 +104,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // Tema untuk Bottom Nav Bar
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           selectedItemColor: primaryColor,
           unselectedItemColor: Colors.grey,
@@ -112,6 +113,7 @@ class MyApp extends StatelessWidget {
 
         useMaterial3: true,
       ),
+      // Ketika aplikasi dibuka, arahin langsung ke halaman login
       home: LoginView(),
     );
   }

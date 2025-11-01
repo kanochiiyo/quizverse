@@ -80,18 +80,14 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil tema global
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Buat Akun Baru'),
-        // Warna AppBar otomatis dari tema global
-      ),
+      appBar: AppBar(title: const Text('Buat Akun Baru')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0), // Padding konsisten
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,17 +107,17 @@ class _RegisterViewState extends State<RegisterView> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // --- Username ---
+
               TextField(
                 controller: _usernameController,
                 decoration: const InputDecoration(
                   labelText: "Username",
                   prefixIcon: Icon(Icons.person),
-                ), // Otomatis pakai tema
+                ),
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
-              // --- Password ---
+
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -144,7 +140,7 @@ class _RegisterViewState extends State<RegisterView> {
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
-              // --- Confirm Password ---
+
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
@@ -167,7 +163,7 @@ class _RegisterViewState extends State<RegisterView> {
                 enabled: !_isLoading,
               ),
               const SizedBox(height: 24),
-              // --- Error Message ---
+
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -177,9 +173,8 @@ class _RegisterViewState extends State<RegisterView> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              // --- Tombol Register ---
+
               ElevatedButton(
-                // Otomatis pakai tema
                 onPressed: _isLoading ? null : _register,
                 child: _isLoading
                     ? const SizedBox(
@@ -193,7 +188,7 @@ class _RegisterViewState extends State<RegisterView> {
                     : const Text("Register"),
               ),
               const SizedBox(height: 16),
-              // --- Tombol Kembali ke Login ---
+
               TextButton(
                 onPressed: _isLoading ? null : () => Navigator.pop(context),
                 child: Text(

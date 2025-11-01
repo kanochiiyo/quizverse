@@ -1,43 +1,43 @@
 import 'dart:convert';
-import 'dart:math'; // Diperlukan untuk Random()
+import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz; // Import timezon
+import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
 class ConversionService {
   final String _currencyApiUrl =
-      'https://v6.exchangerate-api.com/v6/54d9aaec75a7f6531106d463/latest/IDR'; // Base IDR
+      'https://v6.exchangerate-api.com/v6/54d9aaec75a7f6531106d463/latest/IDR';
 
   static bool _timezoneInitialized = false;
 
   Future<void> _initializeTimezone() async {
-    // Jika sudah diinisialisasi (mungkin oleh main.dart), lewati.
+    // Kalo udah pernah, gausah lagi diinisialisasi
     if (_timezoneInitialized) return;
 
     try {
-      // Muat data timezone
       tz_data.initializeTimeZones();
-      // Set lokasi default (jika main.dart gagal)
+
       tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
       _timezoneInitialized = true;
-      print("Timezone initialized by ConversionService.");
+      debugPrint("Timezone initialized by ConversionService.");
     } catch (e) {
-      print("Failed to initialize timezone in ConversionService: $e");
-      // Fallback jika gagal
+      debugPrint("Failed to initialize timezone in ConversionService: $e");
+
       if (!_timezoneInitialized) {
-        // Hanya set fallback jika belum pernah di-set
         tz.setLocalLocation(tz.UTC);
-        _timezoneInitialized = true; // Tandai tetap true agar tidak diulang
+        _timezoneInitialized = true;
       }
     }
   }
 
+  // Untuk ambil conversion rate dari API exchangerate-api
   Future<Map<String, dynamic>> _getExchangeRates() async {
-    // ... (Kode Anda di sini sudah benar)
     final url = Uri.parse(_currencyApiUrl);
     try {
       final response = await http.get(url);
+      // Kalau berhasil, simpan ke list data
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['result'] == 'success') {
@@ -57,31 +57,38 @@ class ConversionService {
         throw Exception('HTTP Error: Status Code ${response.statusCode}');
       }
     } catch (e) {
-      print("Error fetching exchange rates: $e");
+      debugPrint("Error fetching exchange rates: $e");
       throw Exception('Gagal mendapatkan kurs mata uang.');
     }
   }
 
   Future<String> getCurrencyFact() async {
-    // ... (Kode Anda di sini sudah benar)
+    // Ambil rate dari API, masukin ke map rates
     try {
       final rates = await _getExchangeRates();
+      // Inisialisasi targetnya, kalo USD per 1 USD, kalo JPY dikonversi per 100 JPY, dst
       final targetCurrencies = {
         'USD': 1.0,
         'EUR': 1.0,
         'JPY': 100.0,
         'KRW': 1000.0,
       };
+
+      // Ambil random kode dari key targetCurrencies
       final randomCurrencyCode = targetCurrencies.keys.elementAt(
         Random().nextInt(targetCurrencies.length),
       );
+
+      // Ambil value dari yang udah dirandom tadi masukin ke amount
       final amount = targetCurrencies[randomCurrencyCode]!;
+      // Ambil rate dari API masukin ke rate
       final rate = rates[randomCurrencyCode];
 
       if (rate == null) {
         return "Info kurs untuk $randomCurrencyCode tidak tersedia saat ini.";
       }
 
+      // Hitung nilai IDR nya
       final idrValue = amount / (rate as num);
       final formattedAmount = NumberFormat("#,##0", "en_US").format(amount);
       final formattedIdrValue = NumberFormat.currency(
@@ -89,6 +96,7 @@ class ConversionService {
         symbol: 'Rp ',
         decimalDigits: 0,
       ).format(idrValue);
+      // Format menjadi misal Rp 16.000 (tanpa decimal)
 
       return "Tahukah kamu? $formattedAmount $randomCurrencyCode saat ini setara dengan $formattedIdrValue! 💰";
     } catch (e) {
@@ -106,16 +114,14 @@ class ConversionService {
         return 'Asia/Jayapura';
       case 'LONDON':
         return 'Europe/London';
-      case 'ASIA/TOKYO': // <-- Tambahkan ini
+      case 'ASIA/TOKYO':
         return 'Asia/Tokyo';
       default:
         try {
-          // Coba dapatkan lokasi jika nama sudah valid
           tz.getLocation(zoneAbbreviation);
           return zoneAbbreviation;
         } catch (_) {
-          // Fallback jika tidak dikenali
-          print(
+          debugPrint(
             "Warning: Timezone abbreviation '$zoneAbbreviation' not recognized, falling back to WIB.",
           );
           return 'Asia/Jakarta';
@@ -125,49 +131,44 @@ class ConversionService {
 
   Future<String> getTimeFact() async {
     try {
-      // 1. Pastikan timezone sudah dimuat
       await _initializeTimezone();
 
-      // 2. Zona waktu sumber (sekarang dijamin aman)
+      //  Buat dapetin waktu saat ini sesuai lokasi lokal (aku set Asia/Jakarta)
       final sourceLocation = tz.local;
       final nowInSource = tz.TZDateTime.now(sourceLocation);
 
-      // 3. Zona waktu target acak
+      // Bikin list untuk target biar bisa dirandom nanti
       final targetZones = ['WITA', 'WIT', 'London', 'Asia/Tokyo'];
+
+      // Pilih waktu random antara targetZones list
       final randomTargetAbbreviation =
           targetZones[Random().nextInt(targetZones.length)];
       final targetZoneName = _getTimezoneName(randomTargetAbbreviation);
 
-      // 4. Dapatkan lokasi (sekarang dijamin aman)
+      // Konversi waktu dari WIB ke targetZoneName menggunakan TZDateTime
       final targetLocation = tz.getLocation(targetZoneName);
-
-      // 5. Konversi waktu
       final timeInTarget = tz.TZDateTime.from(nowInSource, targetLocation);
 
-      // 6. Format waktu
       final sourceTimeString = DateFormat('HH:mm').format(nowInSource);
       final targetTimeString = DateFormat('HH:mm').format(timeInTarget);
 
-      // 7. Dapatkan singkatan zona waktu sumber (misal WIB, WITA, atau UTC jika gagal)
       final sourceAbbreviation = nowInSource.timeZoneName;
 
       return "Tahukah kamu? Pukul $sourceTimeString $sourceAbbreviation saat ini sama dengan pukul $targetTimeString di $randomTargetAbbreviation! 🌍⏰";
     } catch (e) {
-      print("Error generating time fact: $e");
-      // Jika terjadi error saat konversi waktu
+      debugPrint("Error generating time fact: $e");
+
       return "Gagal memuat fakta waktu.";
     }
   }
 
+  // Ngerandom antara currency atau time
   Future<String> getRandomFact() async {
-    // Pilih secara acak (50/50 chance) antara fakta mata uang atau waktu
     bool showCurrencyFact = Random().nextBool();
 
     if (showCurrencyFact) {
-      // Jika terpilih mata uang (perlu await karena async)
       return await getCurrencyFact();
     } else {
-      // Jika terpilih waktu (sekarang juga async)
       return await getTimeFact();
     }
   }
