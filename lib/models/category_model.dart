@@ -41,6 +41,7 @@ class CategoryModel {
     return _categoryIcons[id] ?? _defaultIcon;
   }
 
+  // Ubah dari JSON ke Map supaya bisa dipakai oleh Flutter
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
     int id = json['id'] as int;
 

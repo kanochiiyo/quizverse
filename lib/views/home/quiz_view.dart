@@ -544,4 +544,11 @@ class _QuizViewState extends State<QuizView> {
       submitQuiz();
     }
   }
+
+  @override
+  void dispose() {
+    _questionTimer?.cancel();
+    _confettiController.dispose();
+    super.dispose();
+  }
 }

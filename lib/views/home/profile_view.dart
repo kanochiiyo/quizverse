@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:quizverse/controllers/auth_controller.dart';
 import 'package:quizverse/views/auth/login_view.dart';
 import 'package:quizverse/services/database_service.dart';
+import 'package:quizverse/services/achievement_service.dart';
+import 'package:quizverse/models/achievement_model.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -13,17 +15,25 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   final AuthController _authController = AuthController();
   final DatabaseService _databaseService = DatabaseService();
+  final AchievementService _achievementService = AchievementService();
+
+  // State untuk statistik
   String? _username;
   bool _isLoadingStats = true;
   int _totalQuizzes = 0;
   String _avgScoreString = "0%";
   String _timePlayedString = "0m";
 
+  // State untuk achievements
+  List<AchievementModel> _achievements = [];
+  bool _isLoadingAchievements = true;
+
   @override
   void initState() {
     super.initState();
     _loadUsername();
     _loadStats();
+    _recalculateAchievements();
   }
 
   Future<void> _loadUsername() async {
@@ -99,6 +109,37 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
+  // Method untuk cek ulang achievement user
+  Future<void> _recalculateAchievements() async {
+    if (mounted) setState(() => _isLoadingAchievements = true);
+    try {
+      final String? userIdString = await _authController.getLoggedInUserId();
+      if (userIdString == null) {
+        if (mounted) setState(() => _isLoadingAchievements = false);
+        return;
+      }
+
+      final achievements = await _achievementService.recalculateAndSaveProgress(
+        int.parse(userIdString),
+      );
+
+      if (mounted) {
+        setState(() {
+          _achievements = achievements;
+          _isLoadingAchievements = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Gagal recalculate achievements: $e");
+      if (mounted) setState(() => _isLoadingAchievements = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal sinkronisasi achievements: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _logout() async {
     final confirmLogout = await showDialog<bool>(
       context: context,
@@ -135,6 +176,60 @@ class _ProfileViewState extends State<ProfileView> {
         }
       }
     }
+  }
+
+  // Method untuk show modal semua achievements
+  void _showAllAchievements() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Semua Achievement',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _achievements.length,
+                  itemBuilder: (context, index) {
+                    final achievement = _achievements[index];
+
+                    return _buildAchievementCard(achievement, expanded: true);
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildStatCard(
@@ -227,6 +322,213 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  // Widget section untuk menampilkan achievements
+  Widget _buildAchievementsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    // Hitung statistik achievement menggunakan service
+    final stats = _achievementService.getAchievementStats(_achievements);
+    // Filter hanya achievement yang sudah unlocked
+    final unlockedAchievements = _achievements
+        .where((a) => a.isUnlocked)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header dengan tombol lihat semua
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Achievements",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextButton(
+              onPressed: _showAllAchievements,
+              child: const Text('Lihat Semua'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Card progress achievement
+        Card(
+          color: theme.primaryColor.withAlpha(26),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: theme.primaryColor.withAlpha(77)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Row untuk tampilkan angka unlocked dan persentase
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${stats['unlocked']} / ${stats['total']} Terbuka',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                    Text(
+                      '${stats['percentage']}%',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Progress bar untuk visualisasi persentase
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: stats['percentage']! / 100,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.primaryColor,
+                    ),
+                    minHeight: 10.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // List achievements yang sudah unlocked (3 teratas)
+        if (_isLoadingAchievements)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (unlockedAchievements.isEmpty)
+          // Pesan jika belum ada achievement terbuka
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Text(
+                  'Belum ada achievement terbuka.\nAyo mulai quiz untuk membuka achievement!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+            ),
+          )
+        else
+          // Tampilkan 3 achievement terbaru yang unlocked
+          ...unlockedAchievements.take(3).map((achievement) {
+            return _buildAchievementCard(achievement);
+          }),
+      ],
+    );
+  }
+
+  // Widget builder untuk achievement card
+  Widget _buildAchievementCard(
+    AchievementModel achievement, {
+    bool expanded = false,
+  }) {
+    final theme = Theme.of(context);
+    final isUnlocked = achievement.isUnlocked;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      // Beda warna untuk locked dan unlocked
+      color: isUnlocked ? Colors.white : Colors.grey[100],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Icon emoji achievement
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: isUnlocked
+                    ? theme.primaryColor.withAlpha(26)
+                    : Colors.grey[300],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  achievement.icon,
+                  style: TextStyle(
+                    fontSize: 32,
+                    // Grayscale jika locked
+                    color: isUnlocked ? null : Colors.grey[500],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Content (title, description, progress)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    achievement.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isUnlocked ? Colors.black : Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    achievement.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isUnlocked ? Colors.grey[700] : Colors.grey[500],
+                    ),
+                  ),
+                  // Tampilkan progress bar jika expanded dan belum unlocked
+                  if (expanded && !isUnlocked) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: achievement.progress,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.primaryColor,
+                        ),
+                        minHeight: 6.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Text progress (X / Y)
+                    Text(
+                      '${achievement.currentValue} / ${achievement.requiredValue}',
+                      style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Status icon (check untuk unlocked, lock untuk locked)
+            if (isUnlocked)
+              Icon(Icons.check_circle, color: theme.primaryColor, size: 28)
+            else if (!expanded)
+              Icon(Icons.lock_outline, color: Colors.grey[400], size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -237,39 +539,51 @@ class _ProfileViewState extends State<ProfileView> {
         automaticallyImplyLeading: false,
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(20.0),
-        children: [
-          const SizedBox(height: 20),
-
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: theme.primaryColor.withAlpha(26),
-            child: Icon(Icons.person, size: 70, color: theme.primaryColor),
-          ),
-          const SizedBox(height: 16),
-
-          Text(
-            _username ?? 'Memuat...',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.wait([_loadStats(), _recalculateAchievements()]);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(20.0),
+          children: [
+            const SizedBox(height: 20),
+            // Avatar pengguna
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: theme.primaryColor.withAlpha(26),
+              child: Icon(Icons.person, size: 70, color: theme.primaryColor),
             ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 24),
-          _buildStatsSection(context),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _logout,
-            label: const Text('Logout'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+            const SizedBox(height: 16),
+            // Username
+            Text(
+              _username ?? 'Memuat...',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            // Section statistik quiz
+            _buildStatsSection(context),
+            const SizedBox(height: 24),
+            // Section achievements (NEW)
+            _buildAchievementsSection(context),
+            const SizedBox(height: 24),
+            // Tombol logout
+            ElevatedButton.icon(
+              onPressed: _logout,
+              label: const Text('Logout'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
