@@ -5,14 +5,17 @@ import 'package:quizverse/views/home/history_detail_view.dart';
 import 'package:flutter/material.dart';
 
 class NotificationService {
+  // Ini singleton biar cuman dibuat sekali selama aplikasinya jalan
   static final NotificationService _notificationService =
       NotificationService._internal();
   factory NotificationService() => _notificationService;
   NotificationService._internal();
 
+  // Inisialisasi pertama
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  // Pertama kali dipanggil saat aplikasi dijalankan
   Future<void> initNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,24 +29,30 @@ class NotificationService {
     );
   }
 
+  // Jika misalnya user klik notifikasi (callback)
+
   @pragma('vm:entry-point')
   static void onNotificationTap(
     NotificationResponse notificationResponse,
   ) async {
+    // Ambil payload dulu (id unik tiap notifikasi)
     final String? payload = notificationResponse.payload;
 
     if (payload == null) return;
 
     if (payload.startsWith('history_id_')) {
       try {
+        // Kalo misalnya payloadnya ada history_id (id quiz history yang dikerjakan oleh user)
         final int historyId = int.parse(payload.split('_').last);
 
         final dbService = DatabaseService();
         await dbService.database;
 
+        // Ambil data sesuai dengan historyId tadi
         final historyItem = await dbService.getHistoryItemById(historyId);
 
         if (historyItem != null) {
+          // Arahin ke HistoryDetailView buat ditampilkan bersama dengan parameter historyItem yang udah diget berdasarkan historyId
           NavigationService.navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => HistoryDetailView(historyItem: historyItem),

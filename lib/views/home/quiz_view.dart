@@ -164,6 +164,7 @@ class _QuizViewState extends State<QuizView> {
           final placemark = placemarks.first;
           address =
               "${placemark.subLocality}, ${placemark.locality}, ${placemark.subAdministrativeArea}";
+          // "${placemark.locality}, ${placemark.subAdministrativeArea}";
           address = address
               .replaceAll("null, ", "")
               .replaceAll("Kecamatan ", "");

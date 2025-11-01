@@ -97,7 +97,7 @@ class _HistoryViewState extends State<HistoryView> {
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Tanggal tidak diketahui';
     try {
-      final isoUtcString = dateString.replaceFirst(' ', 'T') + "Z";
+      final isoUtcString = "${dateString.replaceFirst(' ', 'T')}Z";
 
       final utcDateTime = DateTime.parse(isoUtcString);
 
