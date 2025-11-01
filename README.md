@@ -40,7 +40,7 @@ Untuk menjalankan proyek ini di komputermu, ikuti langkah-langkah berikut:
 
 1.  **Clone repositori**
     ```sh
-    git clone [https://github.com/kanochiiyo/quizverse.git](https://github.com/kanochiiyo/quizverse.git)
+    git clone https://github.com/kanochiiyo/quizverse.git
     ```
 
 2.  **Pindah ke direktori proyek**
