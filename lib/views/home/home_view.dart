@@ -330,9 +330,10 @@ class _HomeViewState extends State<HomeView> {
     }
 
     return SizedBox(
-      height: 120,
+      height: 105,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.only(right: 16),
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final category = categories[index];
@@ -389,8 +390,8 @@ class _HomeViewState extends State<HomeView> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: 110,
-        margin: EdgeInsets.only(right: 12),
+        width: 100,
+        margin: EdgeInsets.only(right: 10),
         decoration: BoxDecoration(
           // Ngatur kalo selected, kalo dipilih, ubah BG card,
           color: isSelected ? colorScheme.primary : theme.cardColor,

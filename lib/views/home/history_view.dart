@@ -277,7 +277,7 @@ class _HistoryViewState extends State<HistoryView> {
                     ),
                   if (historyItem['quiz_data_json'] != null)
                     const Padding(
-                      padding: EdgeInsets.only(top: 6.0), // Beri sedikit jarak
+                      padding: EdgeInsets.only(top: 6.0), 
                       child: Text(
                         'Klik untuk lihat detail...',
                         style: TextStyle(
